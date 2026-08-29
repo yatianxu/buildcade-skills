@@ -5523,6 +5523,63 @@ Preview stopped (${signal}).
 // src/commands/login.ts
 var import_node_readline = require("node:readline");
 
+// src/auth/origin.ts
+var import_node_net = require("node:net");
+var PRODUCTION_API_URL = "https://api.tokenaimax.com";
+function normalizeApiOrigin(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("Invalid API URL: expected an absolute HTTP(S) origin.");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error(
+      "Invalid API URL: expected an HTTP(S) origin without credentials, path, query or fragment."
+    );
+  }
+  return url.origin;
+}
+function isLoopbackApiOrigin(value) {
+  const hostname = new URL(normalizeApiOrigin(value)).hostname.replace(/^\[/, "").replace(/\]$/, "").toLowerCase();
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    return true;
+  }
+  if ((0, import_node_net.isIP)(hostname) === 4) {
+    return hostname.split(".")[0] === "127";
+  }
+  return hostname === "::1";
+}
+function safeApiOrigin(value) {
+  try {
+    return normalizeApiOrigin(value);
+  } catch {
+    return "<invalid API origin>";
+  }
+}
+function resolveApiOrigin(explicit) {
+  return normalizeApiOrigin(
+    explicit ?? process.env["BUILDCADE_API_URL"] ?? PRODUCTION_API_URL
+  );
+}
+function resolveLoginApiOrigin(explicit, dev) {
+  if (!dev) {
+    return resolveApiOrigin(explicit);
+  }
+  if (!explicit) {
+    throw new Error("login --dev requires --api-url <local-origin>.");
+  }
+  const origin = normalizeApiOrigin(explicit);
+  if (!isLoopbackApiOrigin(origin)) {
+    throw new Error("login --dev requires a loopback --api-url.");
+  }
+  return origin;
+}
+function reportApiTarget(origin) {
+  process.stderr.write(`Target API: ${safeApiOrigin(origin)}
+`);
+}
+
 // src/auth/api.ts
 var ApiError = class extends Error {
   constructor(message, status, code) {
@@ -5535,7 +5592,13 @@ var ApiError = class extends Error {
   code;
 };
 function defaultApiUrl() {
-  return process.env["BUILDCADE_API_URL"] ?? "http://127.0.0.1:3000";
+  return resolveApiOrigin();
+}
+function networkErrorCode(error) {
+  if (typeof error !== "object" || error === null || !("cause" in error) || typeof error.cause !== "object" || error.cause === null || !("code" in error.cause) || typeof error.cause.code !== "string") {
+    return void 0;
+  }
+  return error.cause.code.replace(/[^A-Z0-9_-]/gi, "").slice(0, 40);
 }
 async function apiRequest(apiUrl, pathname, options = {}) {
   const headers = {};
@@ -5559,7 +5622,11 @@ async function apiRequest(apiUrl, pathname, options = {}) {
       body
     });
   } catch (err2) {
-    throw new ApiError(`Network error: ${err2.message}`, 0);
+    const code = networkErrorCode(err2);
+    throw new ApiError(
+      `Network error contacting ${safeApiOrigin(apiUrl)}${code ? ` (${code})` : ""}.`,
+      0
+    );
   }
   if (response.status === 204) {
     return void 0;
@@ -5580,20 +5647,75 @@ async function apiRequest(apiUrl, pathname, options = {}) {
 var import_promises9 = require("node:fs/promises");
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path9 = __toESM(require("node:path"), 1);
+var CredentialsError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CredentialsError";
+  }
+};
 var DEFAULT_CREDENTIALS_DIR = import_node_path9.default.join(import_node_os.default.homedir(), ".buildcade");
 var CREDENTIALS_FILE_NAME = "credentials.json";
-async function loadCredentials(dir = DEFAULT_CREDENTIALS_DIR) {
+async function loadCredentials(dir = DEFAULT_CREDENTIALS_DIR, apiUrl = defaultApiUrl()) {
   try {
     const text = await (0, import_promises9.readFile)(import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME), "utf8");
-    return JSON.parse(text);
-  } catch {
+    const document = JSON.parse(text);
+    const targetOrigin = normalizeApiOrigin(apiUrl);
+    if (isCredentialStore(document)) {
+      const profile = document.profiles[targetOrigin];
+      return profile?.token ? { apiUrl: targetOrigin, ...profile } : null;
+    }
+    if (isLegacyCredentials(document)) {
+      const legacyOrigin = normalizeApiOrigin(document.apiUrl);
+      if (isLoopbackApiOrigin(legacyOrigin)) {
+        throw new CredentialsError(
+          `Legacy credentials target local API ${safeApiOrigin(legacyOrigin)}. Run "buildcade login" for production or "buildcade login --dev --api-url <local-origin>" for local development.`
+        );
+      }
+      return legacyOrigin === targetOrigin ? { ...document, apiUrl: legacyOrigin } : null;
+    }
     return null;
+  } catch (error) {
+    if (error instanceof CredentialsError) {
+      throw error;
+    }
+    return null;
+  }
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isCredentialProfile(value) {
+  return isRecord(value) && typeof value["token"] === "string";
+}
+function isCredentialStore(value) {
+  if (!isRecord(value) || value["schemaVersion"] !== 2 || !isRecord(value["profiles"])) {
+    return false;
+  }
+  return Object.values(value["profiles"]).every(isCredentialProfile);
+}
+function isLegacyCredentials(value) {
+  return isRecord(value) && typeof value["token"] === "string" && typeof value["apiUrl"] === "string";
+}
+async function loadCredentialStore(dir) {
+  try {
+    const text = await (0, import_promises9.readFile)(import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME), "utf8");
+    const document = JSON.parse(text);
+    return isCredentialStore(document) ? document : { schemaVersion: 2, profiles: {} };
+  } catch {
+    return { schemaVersion: 2, profiles: {} };
   }
 }
 async function saveCredentials(credentials, dir = DEFAULT_CREDENTIALS_DIR) {
   const file = import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME);
+  const apiUrl = normalizeApiOrigin(credentials.apiUrl);
+  const store = await loadCredentialStore(dir);
+  store.profiles[apiUrl] = {
+    token: credentials.token,
+    user: credentials.user,
+    workspace: credentials.workspace
+  };
   await (0, import_promises9.mkdir)(dir, { recursive: true });
-  await (0, import_promises9.writeFile)(file, JSON.stringify(credentials, null, 2) + "\n", "utf8");
+  await (0, import_promises9.writeFile)(file, JSON.stringify(store, null, 2) + "\n", "utf8");
   try {
     await (0, import_promises9.chmod)(file, 384);
   } catch {
@@ -5720,21 +5842,35 @@ async function magicLinkLogin(opts) {
   }
 }
 function registerLoginCommand(program3) {
-  program3.command("login").description("Sign in to Buildcade (GitHub device flow by default)").option("--json", "machine-readable output").option("--api-url <url>", "API base URL", defaultApiUrl()).option("--email <email>", "sign in with an email verification link").option("--dev", "use the local developer credential endpoint").action(
+  program3.command("login").description("Sign in to Buildcade (GitHub device flow by default)").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").option("--email <email>", "sign in with an email verification link").option(
+    "--dev",
+    "use the local developer credential endpoint (requires --api-url)"
+  ).action(
     async (opts) => {
+      let apiUrl;
+      try {
+        apiUrl = resolveLoginApiOrigin(
+          opts.apiUrl ?? (opts.dev ? void 0 : defaultApiUrl()),
+          opts.dev ?? false
+        );
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+        return;
+      }
       if (opts.dev) {
-        await devLogin(opts.apiUrl, opts.json ?? false);
+        await devLogin(apiUrl, opts.json ?? false);
         return;
       }
       if (opts.email) {
         await magicLinkLogin({
-          apiUrl: opts.apiUrl,
+          apiUrl,
           email: opts.email,
           json: opts.json
         });
         return;
       }
-      await deviceFlowLogin(opts);
+      await deviceFlowLogin({ apiUrl, json: opts.json });
     }
   );
 }
@@ -5749,26 +5885,47 @@ async function devLogin(apiUrl, json) {
 
 // src/commands/whoami.ts
 function registerWhoamiCommand(program3) {
-  program3.command("whoami").description("Show the current CLI identity and workspace").option("--json", "machine-readable output").action(async (opts) => {
-    const credentials = await loadCredentials();
+  program3.command("whoami").description("Show the current CLI identity and workspace").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").action(async (opts) => {
+    let apiUrl;
+    try {
+      apiUrl = resolveApiOrigin(opts.apiUrl);
+    } catch (error) {
+      console.error(`error: ${error.message}`);
+      process.exitCode = 2;
+      return;
+    }
+    reportApiTarget(apiUrl);
+    let credentials;
+    try {
+      credentials = await loadCredentials(void 0, apiUrl);
+    } catch (error) {
+      if (error instanceof CredentialsError) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 4;
+        return;
+      }
+      throw error;
+    }
     if (!credentials?.token) {
       if (opts.json) {
         printJson({
           schemaVersion: 1,
           command: "whoami",
           ok: false,
-          result: { authenticated: false }
+          result: { authenticated: false, apiUrl }
         });
       } else {
         console.log("Not signed in.");
-        console.log("Run:");
-        console.log("  buildcade login");
+        console.log(`No credentials for ${apiUrl}.`);
+        console.log(
+          `Run: buildcade login${opts.apiUrl ? ` --api-url ${apiUrl}` : ""}`
+        );
       }
       process.exitCode = 4;
       return;
     }
     try {
-      const me = await apiRequest(credentials.apiUrl, "/api/me", { token: credentials.token });
+      const me = await apiRequest(apiUrl, "/api/me", { token: credentials.token });
       if (opts.json) {
         printJson({
           schemaVersion: 1,
@@ -5776,6 +5933,7 @@ function registerWhoamiCommand(program3) {
           ok: true,
           result: {
             authenticated: true,
+            apiUrl,
             user: me.user,
             workspace: me.workspace
           }
@@ -5810,8 +5968,17 @@ async function waitForBuild(apiUrl, token, buildId, timeoutMs = 12e4) {
   throw new ApiError("Timed out waiting for build processing.", 0);
 }
 function registerUploadCommand(program3) {
-  program3.command("upload [dir]").description("Validate, pack and upload an artifact to Buildcade").requiredOption("--game <id>", "target game id").option("--json", "machine-readable output").option("--wait", "wait for build processing to finish").option("--api-url <url>", "API base URL").action(
+  program3.command("upload [dir]").description("Validate, pack and upload an artifact to Buildcade").requiredOption("--game <id>", "target game id").option("--json", "machine-readable output").option("--wait", "wait for build processing to finish").option("--api-url <url>", "API base origin").action(
     async (dirArg, opts) => {
+      let apiUrl;
+      try {
+        apiUrl = resolveApiOrigin(opts.apiUrl);
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+        return;
+      }
+      reportApiTarget(apiUrl);
       const root = import_node_path10.default.resolve(process.cwd(), dirArg ?? ".");
       const validation = await validateProject(root);
       if (validation.validation === "fail") {
@@ -5830,13 +5997,25 @@ function registerUploadCommand(program3) {
         process.exitCode = 9;
         return;
       }
-      const credentials = await loadCredentials();
+      let credentials;
+      try {
+        credentials = await loadCredentials(void 0, apiUrl);
+      } catch (error) {
+        if (error instanceof CredentialsError) {
+          console.error(`error: ${error.message}`);
+          process.exitCode = 4;
+          return;
+        }
+        throw error;
+      }
       if (!credentials?.token) {
-        console.error("Not signed in. Run: buildcade login");
+        console.error(`No credentials for ${apiUrl}.`);
+        console.error(
+          `Run: buildcade login${opts.apiUrl ? ` --api-url ${apiUrl}` : ""}`
+        );
         process.exitCode = 4;
         return;
       }
-      const apiUrl = opts.apiUrl ?? credentials.apiUrl;
       try {
         const zip = await createArtifactZip(root);
         const sha256 = (0, import_node_crypto2.createHash)("sha256").update(zip.bytes).digest("hex");
@@ -6132,7 +6311,7 @@ function registerSkillCommands(program3) {
 }
 
 // src/public-main.ts
-process.env["BUILDCADE_API_URL"] ??= "https://api.tokenaimax.com";
+process.env["BUILDCADE_API_URL"] ??= PRODUCTION_API_URL;
 var program2 = new Command();
 program2.name("buildcade").description("Buildcade Creator tools").helpOption("-h, --help", "display help for command");
 program2.command("version").description("Print CLI, Validator and supported Game Spec versions").action(() => {

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "release": "v1.0.1",
+  "release": "v1.0.2",
   "package": "skills/buildcade-creator",
   "sourceRepository": "yatianxu/Buildcade",
-  "sourceCommit": "11c1d5f7abcda7bbb5b7906a2946a782226e77d9",
+  "sourceCommit": "eaf16f8fc19c181ba1cae76c6264638148aa51ca",
   "cliDistribution": {
     "executable": "buildcade",
-    "source": "github:yatianxu/buildcade-skills#v1.0.1",
+    "source": "github:yatianxu/buildcade-skills#v1.0.2",
     "commands": [
       "version",
       "skill",

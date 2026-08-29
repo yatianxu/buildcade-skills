@@ -5,7 +5,7 @@ description: "Prepare Creator-owned browser games for Buildcade Game Spec v1. Us
 
 # Buildcade Creator
 
-Use the pinned public Buildcade Creator package. The canonical V1.0.1 invocation is `npx --yes github:yatianxu/buildcade-skills#v1.0.1`; do not substitute a moving branch, unknown fork or unverified npm-registry package.
+Use the pinned public Buildcade Creator package. The canonical V1.0.2 invocation is `npx --yes github:yatianxu/buildcade-skills#v1.0.2`; do not substitute a moving branch, unknown fork or unverified npm-registry package.
 
 ## Establish the boundary
 

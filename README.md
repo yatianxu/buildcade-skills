@@ -4,9 +4,9 @@ This repository distributes the public Buildcade Creator Skill as an immutable, 
 
 | Field | Value |
 | --- | --- |
-| Release | `v1.0.1` |
+| Release | `v1.0.2` |
 | Package | `skills/buildcade-creator/` |
-| Reviewed core commit | `11c1d5f7abcda7bbb5b7906a2946a782226e77d9` |
+| Reviewed core commit | `eaf16f8fc19c181ba1cae76c6264638148aa51ca` |
 | Game contract | Buildcade Game Spec v1 |
 | CLI | Included public Creator CLI, runnable through pinned `npx` |
 
@@ -15,7 +15,7 @@ This repository distributes the public Buildcade Creator Skill as an immutable, 
 Install the immutable release directly:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.0.1 skill install --agent codex
+npx --yes github:yatianxu/buildcade-skills#v1.0.2 skill install --agent codex
 ```
 
 Restart or reopen the agent task, then request:
@@ -29,7 +29,7 @@ $buildcade-creator validate this game and prepare a local preview
 Choose that agent's Skill directory explicitly:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.0.1 skill install --target <agent-skill-directory>
+npx --yes github:yatianxu/buildcade-skills#v1.0.2 skill install --target <agent-skill-directory>
 ```
 
 Convenience presets are available for `codex`, `claude`, `cursor` and `agents`. The explicit target remains the portable path for any directory-based agent.
@@ -39,10 +39,12 @@ Convenience presets are available for `codex`, `claude`, `cursor` and `agents`. 
 Run the same pinned release from any Creator project without a global install:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.0.1 validate . --json
-npx --yes github:yatianxu/buildcade-skills#v1.0.1 preview . --no-open
-npx --yes github:yatianxu/buildcade-skills#v1.0.1 pack . --json
+npx --yes github:yatianxu/buildcade-skills#v1.0.2 validate . --json
+npx --yes github:yatianxu/buildcade-skills#v1.0.2 preview . --no-open
+npx --yes github:yatianxu/buildcade-skills#v1.0.2 pack . --json
 ```
+
+Authenticated commands default to `https://api.tokenaimax.com`. Credentials are stored in separate profiles keyed by normalized API origin. Local developer authentication requires an explicit loopback origin: `login --dev --api-url http://localhost:<port>`.
 
 ## Business boundary
 
