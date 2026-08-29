@@ -1,0 +1,20 @@
+{
+  "name": "buildcade",
+  "version": "1.0.1",
+  "description": "Buildcade Creator Skill installer and public Creator CLI",
+  "type": "module",
+  "bin": {
+    "buildcade": "dist/buildcade.cjs"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "README.md",
+    "RELEASE_NOTES.md",
+    "RELEASE-MANIFEST.json",
+    "SHA256SUMS"
+  ]
+}
