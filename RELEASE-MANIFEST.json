@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "release": "v1.0.0",
+  "package": "skills/buildcade-creator",
+  "sourceRepository": "yatianxu/Buildcade",
+  "sourceCommit": "4ddbb428ecc9060c9e060ad74652e88bc6753cd6",
+  "cliCompatibility": "@buildcade/cli 0.1.x (private workspace)",
+  "gameSpec": 1,
+  "authoritiesExcluded": [
+    "review",
+    "approve",
+    "publish",
+    "release",
+    "staff_access",
+    "provider_mutation"
+  ]
+}

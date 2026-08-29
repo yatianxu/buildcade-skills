@@ -1,0 +1,4 @@
+interface:
+  display_name: "Buildcade Creator"
+  short_description: "Validate, preview, package, and upload Buildcade games"
+  default_prompt: "Use $buildcade-creator to prepare and validate this game for Buildcade without bypassing review or release authority."
