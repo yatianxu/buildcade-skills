@@ -1,4 +1,4 @@
-# Buildcade Creator Skill v1.1.0
+# Buildcade Creator Skill v1.1.1
 
 ## Included
 
@@ -15,6 +15,7 @@
 - Codex metadata plus progressive-disclosure workflow reference.
 - Checksum-verifying `npx` installer for Codex and explicit directories used by other agents.
 - Bundled public Creator CLI for `init`, `validate`, `preview`, `pack`, `login`, `whoami`, `games`, `builds`, `upload` and `logout`.
+- Checksum-verified one-time CLI installation through pinned `npx`, followed by the installed `buildcade` executable and global `--version`.
 - Canonical production API origin with explicit-over-environment precedence and no bundled fixed local API fallback.
 - Explicit loopback `--api-url` requirement for `login --dev`.
 - Versioned credentials partitioned by normalized API origin, with legacy loopback credentials rejected until re-login.
@@ -22,12 +23,12 @@
 
 ## Verified candidate
 
-- Reviewed core commit: `d76d5997fe918ae9cbcff7841612a9d70aeb6f28`.
+- Reviewed core commit: `5ceee2c8d83a5960a21d6443daf51aa971a71edb`.
 - Vanilla and Phaser Validate, live HTTP Preview and Pack.
 - Stable remote-executable-code `BC3001` failure and bounded artifact-local repair.
 - Install, upgrade, rollback and uninstall rehearsal.
 - Entry-by-entry exclusion of `.env`, `.git`, `.buildcade`, `node_modules` and injected secret sentinels.
-- Direct public CLI use when the Skill is not installed.
+- Installed public CLI use when the Skill is not installed.
 - Public bundle scan requiring the production API origin and rejecting fixed local API origins on ports 3000 and 3100.
 
 ## Not included

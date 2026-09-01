@@ -4,13 +4,14 @@ Use this reference for the public Skill v1. Pin the immutable public release; if
 
 ## Invocation
 
-The public Creator CLI requires Node `>=24`. Invoke the immutable release from the selected game directory:
+The public Creator CLI requires Node `>=24`. Install the immutable release once, then invoke the installed executable from the selected game directory:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 <command> <arguments>
+npx --yes github:yatianxu/buildcade-skills#v1.1.1 install
+buildcade --version
 ```
 
-The same command works on supported Node platforms. Do not substitute the moving `main` branch, an unknown fork or an unverified global package.
+The installer works on supported Node platforms. After installation, use `buildcade <command> <arguments>` directly. Do not substitute the moving `main` branch, an unknown fork or an unverified global package.
 
 ## Canonical sequence
 
@@ -19,7 +20,7 @@ The same command works on supported Node platforms. Do not substitute the moving
 Interactive terminals may ask for the Runtime Contract. Non-interactive agents must provide explicit choices, for example:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 init <artifact-root> `
+buildcade init <artifact-root> `
   --input keyboard,mouse --orientation any --fullscreen no --network none
 ```
 
@@ -28,7 +29,7 @@ Do not guess input capabilities or allowed HTTPS origins. Ask the Creator when t
 ### 2. Validate with machine output
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 validate <artifact-root> --json
+buildcade validate <artifact-root> --json
 ```
 
 Expected output is one JSON document with `schemaVersion`, `command`, `ok`, `result`, and `diagnostics`. Exit `0` means pass or pass-with-warnings; exit `1` means validation failure. Preserve stable diagnostic codes. Representative fixtures include:
@@ -44,7 +45,7 @@ Never rewrite a diagnostic into a different code or suppress it.
 ### 3. Preview after validation
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 preview <artifact-root> --no-open --json
+buildcade preview <artifact-root> --no-open --json
 ```
 
 The command stays running until interrupted. Capture the returned local URL, exercise only the requested smoke path, and stop it with Ctrl+C or the process-control equivalent. A local preview does not prove cloud Runtime, browser matrix, accessibility, or formal acceptance.
@@ -52,7 +53,7 @@ The command stays running until interrupted. Capture the returned local URL, exe
 ### 4. Pack deterministically
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 pack <artifact-root> --json
+buildcade pack <artifact-root> --json
 ```
 
 The JSON result includes `artifactPath`, `artifactHash`, `sizeBytes`, spec, and warning count. Packaging excludes top-level `.git`, `.buildcade`, `node_modules`, `.env`, and `.env.*`; still inspect the resulting entry list before upload and fail closed on credential-like material.
@@ -60,12 +61,9 @@ The JSON result includes `artifactPath`, `artifactHash`, `sizeBytes`, spec, and 
 ### 5. Authenticate and upload only on explicit request
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 login
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 whoami --json
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 games list --json
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 games link <artifact-root> --game <game-id-or-name>
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 upload <artifact-root> --wait --json
-npx --yes github:yatianxu/buildcade-skills#v1.1.0 builds show <build-id-or-number> --wait --json
+buildcade login
+buildcade whoami --json
+buildcade upload <artifact-root> --game <game-id> --wait --json
 ```
 
 The public CLI defaults to `https://api.tokenaimax.com` and stores credentials in separate profiles keyed by normalized API origin. Local developer authentication must use an explicit loopback origin, for example `login --dev --api-url http://localhost:<port>`; the CLI does not guess a development port. Legacy single-origin loopback credentials fail closed and require a fresh login.
@@ -78,11 +76,11 @@ Do not echo credential files or tokens. Upload validates and packs again, create
 - Authentication/authorization failure: stop and ask the user to reauthenticate or obtain the correct project authority. Never borrow Staff or Reviewer credentials.
 - Filesystem/package failure: preserve the source tree, report the exact path and operation, and avoid partial artifact claims.
 - API/network failure: report the request phase and retry boundary without exposing credentials or copying secrets into evidence.
-- Missing Node 24, `npx`, or public release access: report the prerequisite and offer the same pinned command after it is available.
+- Missing Node 24, the installed `buildcade` executable, `npx`, or public release access: report the prerequisite and offer the same pinned installer after it is available.
 
 ## Public references
 
 - Platform documentation: `https://game.tokenaimax.com/en/docs/skills`
-- Immutable public release: `https://github.com/yatianxu/buildcade-skills/releases/tag/v1.1.0`
+- Immutable public release: `https://github.com/yatianxu/buildcade-skills/releases/tag/v1.1.1`
 - Game Spec overview: `https://game.tokenaimax.com/en/docs/game-spec`
 - CLI guide: `https://game.tokenaimax.com/en/docs/cli`

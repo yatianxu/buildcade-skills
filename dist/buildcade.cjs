@@ -963,7 +963,7 @@ var require_command = __commonJS({
   "../../node_modules/.pnpm/commander@12.1.0/node_modules/commander/lib/command.js"(exports2) {
     var EventEmitter = require("node:events").EventEmitter;
     var childProcess = require("node:child_process");
-    var path15 = require("node:path");
+    var path16 = require("node:path");
     var fs = require("node:fs");
     var process2 = require("node:process");
     var { Argument: Argument2, humanReadableArgName } = require_argument();
@@ -1896,9 +1896,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
         let launchWithNode = false;
         const sourceExt = [".js", ".ts", ".tsx", ".mjs", ".cjs"];
         function findFile(baseDir, baseName) {
-          const localBin = path15.resolve(baseDir, baseName);
+          const localBin = path16.resolve(baseDir, baseName);
           if (fs.existsSync(localBin)) return localBin;
-          if (sourceExt.includes(path15.extname(baseName))) return void 0;
+          if (sourceExt.includes(path16.extname(baseName))) return void 0;
           const foundExt = sourceExt.find(
             (ext) => fs.existsSync(`${localBin}${ext}`)
           );
@@ -1916,17 +1916,17 @@ Expecting one of '${allowedValues.join("', '")}'`);
           } catch (err2) {
             resolvedScriptPath = this._scriptPath;
           }
-          executableDir = path15.resolve(
-            path15.dirname(resolvedScriptPath),
+          executableDir = path16.resolve(
+            path16.dirname(resolvedScriptPath),
             executableDir
           );
         }
         if (executableDir) {
           let localFile = findFile(executableDir, executableFile);
           if (!localFile && !subcommand._executableFile && this._scriptPath) {
-            const legacyName = path15.basename(
+            const legacyName = path16.basename(
               this._scriptPath,
-              path15.extname(this._scriptPath)
+              path16.extname(this._scriptPath)
             );
             if (legacyName !== this._name) {
               localFile = findFile(
@@ -1937,7 +1937,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
           }
           executableFile = localFile || executableFile;
         }
-        launchWithNode = sourceExt.includes(path15.extname(executableFile));
+        launchWithNode = sourceExt.includes(path16.extname(executableFile));
         let proc;
         if (process2.platform !== "win32") {
           if (launchWithNode) {
@@ -2777,7 +2777,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @return {Command}
        */
       nameFromFilename(filename) {
-        this._name = path15.basename(filename, path15.extname(filename));
+        this._name = path16.basename(filename, path16.extname(filename));
         return this;
       }
       /**
@@ -2791,9 +2791,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [path]
        * @return {(string|null|Command)}
        */
-      executableDir(path16) {
-        if (path16 === void 0) return this._executableDir;
-        this._executableDir = path16;
+      executableDir(path17) {
+        if (path17 === void 0) return this._executableDir;
+        this._executableDir = path17;
         return this;
       }
       /**
@@ -3923,7 +3923,7 @@ async function validateProject(dir, options = {}) {
 var VALIDATOR_VERSION = "0.1.0";
 
 // src/version.ts
-var CLI_VERSION = "1.1.0";
+var CLI_VERSION = "1.1.1";
 
 // src/commands/init.ts
 var import_promises5 = require("node:fs/promises");
@@ -5556,6 +5556,7 @@ var API_AUTH_ROUTES = {
   googleCallback: "/api/auth/oauth/google/callback",
   staffEmailRequest: "/api/auth/staff/email/request",
   staffEmailVerify: "/api/auth/staff/email/verify",
+  staffInvitationExchange: "/api/auth/staff/invitations/exchange",
   staffTotpEnrollment: "/api/auth/staff/totp/enrollments",
   staffTotpEnrollmentConfirm: "/api/auth/staff/totp/enrollments/confirm",
   staffSession: "/api/auth/staff/sessions",
@@ -6321,10 +6322,10 @@ async function openUrl(url) {
       )
     );
   }
-  const { spawn: spawn2 } = await import("node:child_process");
+  const { spawn: spawn3 } = await import("node:child_process");
   const command = process.platform === "win32" ? "cmd" : process.platform === "darwin" ? "open" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
-  spawn2(command, args, {
+  spawn3(command, args, {
     detached: true,
     stdio: "ignore",
     windowsHide: true
@@ -7086,15 +7087,104 @@ function registerLogoutCommand(program3) {
   );
 }
 
+// src/commands/install.ts
+var import_node_child_process2 = require("node:child_process");
+var import_node_path15 = __toESM(require("node:path"), 1);
+function installWithNpm(root, prefix) {
+  const args = [
+    "install",
+    "--global",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+    root
+  ];
+  if (prefix) args.splice(2, 0, "--prefix", import_node_path15.default.resolve(prefix));
+  const npmCli = process.env["npm_execpath"];
+  const executable = npmCli ? process.execPath : "npm";
+  const executableArguments = npmCli ? [npmCli, ...args] : args;
+  return new Promise((resolve, reject) => {
+    const child = (0, import_node_child_process2.spawn)(executable, executableArguments, {
+      stdio: "ignore",
+      windowsHide: true
+    });
+    child.once(
+      "error",
+      () => reject(new Error("BUILDCADE_CLI_INSTALL_LAUNCH_FAILED"))
+    );
+    child.once("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error("BUILDCADE_CLI_INSTALL_FAILED"));
+    });
+  });
+}
+async function installPublicCli(options) {
+  const root = packageRoot();
+  await verifyRelease(root);
+  const release = await releaseVersion(root);
+  if (release !== `v${CLI_VERSION}`)
+    throw new Error("BUILDCADE_CLI_INSTALL_VERSION_MISMATCH");
+  await installWithNpm(root, options.prefix);
+  return {
+    version: CLI_VERSION,
+    executable: "buildcade",
+    ...options.prefix ? { prefix: import_node_path15.default.resolve(options.prefix) } : {}
+  };
+}
+function registerInstallCommand(program3) {
+  program3.command("install").description("Install this verified Buildcade CLI release").option("--prefix <directory>", "install into an explicit npm prefix").option("--json", "machine-readable output").action(async (options) => {
+    try {
+      const result = await installPublicCli(options);
+      if (options.json) {
+        printJson({
+          schemaVersion: 1,
+          command: "install",
+          ok: true,
+          result
+        });
+        return;
+      }
+      console.log(
+        human(
+          `Buildcade CLI ${result.version} is installed.`,
+          `Buildcade CLI ${result.version} \u5DF2\u5B89\u88C5\u3002`,
+          `Buildcade CLI ${result.version} \u5DF2\u5B89\u88DD\u3002`
+        )
+      );
+      console.log(
+        result.prefix ? human(
+          `Add the npm prefix to PATH, then run: buildcade --version`,
+          `\u8BF7\u5C06 npm \u5B89\u88C5\u76EE\u5F55\u52A0\u5165 PATH\uFF0C\u7136\u540E\u8FD0\u884C\uFF1Abuildcade --version`,
+          `\u8ACB\u5C07 npm \u5B89\u88DD\u76EE\u9304\u52A0\u5165 PATH\uFF0C\u7136\u5F8C\u57F7\u884C\uFF1Abuildcade --version`
+        ) : human(
+          "Open a new terminal, then run: buildcade --version",
+          "\u8BF7\u6253\u5F00\u65B0\u7684\u7EC8\u7AEF\uFF0C\u7136\u540E\u8FD0\u884C\uFF1Abuildcade --version",
+          "\u8ACB\u958B\u555F\u65B0\u7684\u7D42\u7AEF\uFF0C\u7136\u5F8C\u57F7\u884C\uFF1Abuildcade --version"
+        )
+      );
+    } catch {
+      console.error(
+        human(
+          "Buildcade CLI could not be installed. Check npm permissions and try again; use --prefix for a user-writable location.",
+          "\u65E0\u6CD5\u5B89\u88C5 Buildcade CLI\u3002\u8BF7\u68C0\u67E5 npm \u6743\u9650\u540E\u91CD\u8BD5\uFF1B\u4E5F\u53EF\u7528 --prefix \u9009\u62E9\u53EF\u5199\u76EE\u5F55\u3002",
+          "\u7121\u6CD5\u5B89\u88DD Buildcade CLI\u3002\u8ACB\u6AA2\u67E5 npm \u6B0A\u9650\u5F8C\u91CD\u8A66\uFF1B\u4E5F\u53EF\u7528 --prefix \u9078\u64C7\u53EF\u5BEB\u76EE\u9304\u3002"
+        )
+      );
+      process.exitCode = 3;
+    }
+  });
+}
+
 // src/public-main.ts
 process.env["BUILDCADE_API_URL"] ??= PRODUCTION_API_URL;
 var program2 = new Command();
-program2.name("buildcade").description("Buildcade Creator tools").option("--locale <locale>", "human output locale: en, zh-CN, or zh-TW").helpOption("-h, --help", "display help for command");
+program2.name("buildcade").description("Buildcade Creator tools").version(CLI_VERSION, "-V, --version", "print the Buildcade CLI version").option("--locale <locale>", "human output locale: en, zh-CN, or zh-TW").helpOption("-h, --help", "display help for command");
 program2.command("version").description("Print CLI, Validator and supported Game Spec versions").action(() => {
   console.log(`Buildcade CLI ${CLI_VERSION}`);
   console.log(`Validator ${VALIDATOR_VERSION}`);
   console.log("Supported Game Spec: 1");
 });
+registerInstallCommand(program2);
 registerSkillCommands(program2);
 registerInitCommand(program2);
 registerValidateCommand(program2);
