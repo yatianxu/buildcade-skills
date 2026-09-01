@@ -5,7 +5,7 @@ description: "Prepare Creator-owned browser games for Buildcade Game Spec v1. Us
 
 # Buildcade Creator
 
-Use the pinned public Buildcade Creator package. The canonical V1.0.2 invocation is `npx --yes github:yatianxu/buildcade-skills#v1.0.2`; do not substitute a moving branch, unknown fork or unverified npm-registry package.
+Use the pinned public Buildcade Creator package. The canonical V1.1.0 invocation is `npx --yes github:yatianxu/buildcade-skills#v1.1.0`; do not substitute a moving branch, unknown fork or unverified npm-registry package.
 
 ## Establish the boundary
 
@@ -26,7 +26,7 @@ Use the pinned public Buildcade Creator package. The canonical V1.0.2 invocation
 
 ## Preserve authority
 
-- The V1 command surface is `init`, `validate`, `preview`, `pack`, `login`, `whoami`, and `upload`.
+- The V1.1 command surface is `init`, `validate`, `preview`, `pack`, `login`, `whoami`, `games`, `builds`, `upload`, and `logout`.
 - Never invent or invoke `publish`, `deploy`, `submit`, or `release`. Upload creates a Build candidate; Creator Center and the governed Staff workflow retain Review and Release authority.
 - Do not weaken Validator rules, hide diagnostics, add remote executable code, enable undeclared network origins, approve a build, or bypass four-eyes controls.
 - Do not mutate DNS, cloud infrastructure, provider credentials, or production data under this Skill.

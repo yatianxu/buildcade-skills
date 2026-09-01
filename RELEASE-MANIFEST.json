@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "release": "v1.0.2",
+  "release": "v1.1.0",
   "package": "skills/buildcade-creator",
   "sourceRepository": "yatianxu/Buildcade",
-  "sourceCommit": "eaf16f8fc19c181ba1cae76c6264638148aa51ca",
+  "sourceCommit": "d76d5997fe918ae9cbcff7841612a9d70aeb6f28",
   "cliDistribution": {
     "executable": "buildcade",
-    "source": "github:yatianxu/buildcade-skills#v1.0.2",
+    "source": "github:yatianxu/buildcade-skills#v1.1.0",
     "commands": [
       "version",
       "skill",
@@ -16,7 +16,10 @@
       "pack",
       "login",
       "whoami",
-      "upload"
+      "upload",
+      "games",
+      "builds",
+      "logout"
     ]
   },
   "gameSpec": 1,

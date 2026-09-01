@@ -963,7 +963,7 @@ var require_command = __commonJS({
   "../../node_modules/.pnpm/commander@12.1.0/node_modules/commander/lib/command.js"(exports2) {
     var EventEmitter = require("node:events").EventEmitter;
     var childProcess = require("node:child_process");
-    var path12 = require("node:path");
+    var path15 = require("node:path");
     var fs = require("node:fs");
     var process2 = require("node:process");
     var { Argument: Argument2, humanReadableArgName } = require_argument();
@@ -1896,9 +1896,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
         let launchWithNode = false;
         const sourceExt = [".js", ".ts", ".tsx", ".mjs", ".cjs"];
         function findFile(baseDir, baseName) {
-          const localBin = path12.resolve(baseDir, baseName);
+          const localBin = path15.resolve(baseDir, baseName);
           if (fs.existsSync(localBin)) return localBin;
-          if (sourceExt.includes(path12.extname(baseName))) return void 0;
+          if (sourceExt.includes(path15.extname(baseName))) return void 0;
           const foundExt = sourceExt.find(
             (ext) => fs.existsSync(`${localBin}${ext}`)
           );
@@ -1916,17 +1916,17 @@ Expecting one of '${allowedValues.join("', '")}'`);
           } catch (err2) {
             resolvedScriptPath = this._scriptPath;
           }
-          executableDir = path12.resolve(
-            path12.dirname(resolvedScriptPath),
+          executableDir = path15.resolve(
+            path15.dirname(resolvedScriptPath),
             executableDir
           );
         }
         if (executableDir) {
           let localFile = findFile(executableDir, executableFile);
           if (!localFile && !subcommand._executableFile && this._scriptPath) {
-            const legacyName = path12.basename(
+            const legacyName = path15.basename(
               this._scriptPath,
-              path12.extname(this._scriptPath)
+              path15.extname(this._scriptPath)
             );
             if (legacyName !== this._name) {
               localFile = findFile(
@@ -1937,7 +1937,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
           }
           executableFile = localFile || executableFile;
         }
-        launchWithNode = sourceExt.includes(path12.extname(executableFile));
+        launchWithNode = sourceExt.includes(path15.extname(executableFile));
         let proc;
         if (process2.platform !== "win32") {
           if (launchWithNode) {
@@ -2777,7 +2777,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @return {Command}
        */
       nameFromFilename(filename) {
-        this._name = path12.basename(filename, path12.extname(filename));
+        this._name = path15.basename(filename, path15.extname(filename));
         return this;
       }
       /**
@@ -2791,9 +2791,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [path]
        * @return {(string|null|Command)}
        */
-      executableDir(path13) {
-        if (path13 === void 0) return this._executableDir;
-        this._executableDir = path13;
+      executableDir(path16) {
+        if (path16 === void 0) return this._executableDir;
+        this._executableDir = path16;
         return this;
       }
       /**
@@ -3923,7 +3923,7 @@ async function validateProject(dir, options = {}) {
 var VALIDATOR_VERSION = "0.1.0";
 
 // src/version.ts
-var CLI_VERSION = "0.1.0";
+var CLI_VERSION = "1.1.0";
 
 // src/commands/init.ts
 var import_promises5 = require("node:fs/promises");
@@ -5523,9 +5523,114 @@ Preview stopped (${signal}).
 // src/commands/login.ts
 var import_node_readline = require("node:readline");
 
+// ../../packages/domain-contracts/src/documentation.ts
+var DOCUMENTATION_IMPORT_LIMITS = {
+  archiveBytes: 10 * 1024 * 1024,
+  extractedBytes: 25 * 1024 * 1024,
+  files: 50,
+  documents: 20,
+  blocksPerLocale: 500,
+  charactersPerLocale: 25e4,
+  listDepth: 4
+};
+
+// ../../packages/domain-contracts/src/surface-routes.ts
+function queryPath(pathname, values) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== void 0 && value.length > 0) query.set(key, value);
+  }
+  const serialized = query.toString();
+  return serialized ? `${pathname}?${serialized}` : pathname;
+}
+var API_AUTH_ROUTES = {
+  adminDevLogin: "/api/auth/admin/dev-login",
+  cliLogin: "/api/auth/cli/login",
+  deviceGithubStart: "/api/auth/device/github/start",
+  deviceGithubPoll: "/api/auth/device/github/poll",
+  emailVerificationRequest: "/api/auth/email-verification/request",
+  emailVerificationVerify: "/api/auth/email-verification/verify",
+  githubStart: "/api/auth/oauth/github",
+  githubCallback: "/api/auth/oauth/github/callback",
+  googleStart: "/api/auth/oauth/google",
+  googleCallback: "/api/auth/oauth/google/callback",
+  staffEmailRequest: "/api/auth/staff/email/request",
+  staffEmailVerify: "/api/auth/staff/email/verify",
+  staffTotpEnrollment: "/api/auth/staff/totp/enrollments",
+  staffTotpEnrollmentConfirm: "/api/auth/staff/totp/enrollments/confirm",
+  staffSession: "/api/auth/staff/sessions",
+  currentStaffSession: "/api/auth/staff/sessions/current",
+  privilegedSession: "/api/auth/privileged-sessions",
+  currentPrivilegedSession: "/api/auth/privileged-sessions/current",
+  currentProductSession: "/api/auth/sessions/current",
+  registrations: "/api/auth/registrations",
+  registrationResend: "/api/auth/registrations/resend",
+  registrationVerify: "/api/auth/registrations/verify",
+  registrationSession: "/api/auth/registrations/session",
+  passwordSessions: "/api/auth/password/sessions",
+  passwordSessionTotp: "/api/auth/password/sessions/totp",
+  passwordResetRequest: "/api/auth/password/reset/request",
+  passwordResetConfirm: "/api/auth/password/reset/confirm",
+  passwordChange: "/api/auth/password/change",
+  productProfileCompletion: "/api/auth/product/profile-completion",
+  productAuthentication: "/api/me/authentication",
+  productSessions: "/api/me/sessions",
+  productSessionsRevokeOthers: "/api/me/sessions/revoke-others",
+  productTotpEnrollments: "/api/auth/product/totp/enrollments",
+  productTotpEnrollmentConfirm: "/api/auth/product/totp/enrollments/confirm",
+  productTotpEnrollment: "/api/auth/product/totp/enrollment",
+  accountClosure: "/api/me/account-closure",
+  magicLinkRequest: "/api/auth/magic-link/request",
+  magicLinkVerify: "/api/auth/magic-link/verify"
+};
+var productRoutes = {
+  home: (locale) => `/${locale}`,
+  login: (locale, options = {}) => queryPath(`/${locale}/login`, {
+    returnTo: options.returnTo,
+    reason: options.reason
+  }),
+  emailVerification: (locale, options = {}) => queryPath(`/${locale}/auth/email/verify`, options),
+  register: (locale) => `/${locale}/register`,
+  terms: (locale) => `/${locale}/terms`,
+  privacy: (locale) => `/${locale}/privacy`,
+  registrationVerification: (locale, options = {}) => queryPath(`/${locale}/auth/register/verify`, options),
+  passwordResetRequest: (locale) => `/${locale}/auth/password/forgot`,
+  passwordReset: (locale, options = {}) => queryPath(`/${locale}/auth/password/reset`, options),
+  profileCompletion: (locale, options = {}) => queryPath(`/${locale}/auth/profile-completion`, options),
+  accountSecurity: (locale) => `/${locale}/account/security`,
+  account: (locale) => `/${locale}/account`,
+  discover: (locale) => `/${locale}/explore`,
+  explore: (locale) => `/${locale}/explore`,
+  search: (locale) => `/${locale}/explore`,
+  create: (locale) => `/${locale}/create`,
+  workspace: (locale) => `/${locale}/creator`,
+  games: (locale) => `/${locale}/creator/games`,
+  game: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}`,
+  publicGame: (locale, slug) => `/${locale}/g/${encodeURIComponent(slug)}`,
+  playReturn: (locale, gameId) => `/${locale}/play-return/${encodeURIComponent(gameId)}`,
+  docs: (locale, topic) => topic ? `/${locale}/docs/${encodeURIComponent(topic)}` : `/${locale}/docs`,
+  help: (locale, topic) => topic ? `/${locale}/help/${encodeURIComponent(topic)}` : `/${locale}/help`,
+  plans: (locale) => `/${locale}/plans`,
+  newGame: (locale) => `/${locale}/creator/games/new`,
+  creatorInsights: (locale) => `/${locale}/creator/insights`,
+  creatorLearn: (locale) => `/${locale}/creator/learn`,
+  builds: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/builds`,
+  build: (locale, gameId, buildId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/builds/${encodeURIComponent(buildId)}`,
+  publishing: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/publishing`,
+  publishingListing: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/publishing/listing`,
+  publishingReview: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/publishing/review`,
+  publishingReleases: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/publishing/releases`,
+  settings: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/settings`,
+  analytics: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/analytics`,
+  notices: (locale, gameId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/notices`,
+  appealForm: (locale, gameId, noticeId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/notices/${encodeURIComponent(noticeId)}/appeal`,
+  appeal: (locale, gameId, appealId) => `/${locale}/creator/games/${encodeURIComponent(gameId)}/appeals/${encodeURIComponent(appealId)}`
+};
+
 // src/auth/origin.ts
 var import_node_net = require("node:net");
 var PRODUCTION_API_URL = "https://api.tokenaimax.com";
+var PRODUCTION_PRODUCT_WEB_URL = "https://game.tokenaimax.com";
 function normalizeApiOrigin(value) {
   let url;
   try {
@@ -5560,6 +5665,11 @@ function safeApiOrigin(value) {
 function resolveApiOrigin(explicit) {
   return normalizeApiOrigin(
     explicit ?? process.env["BUILDCADE_API_URL"] ?? PRODUCTION_API_URL
+  );
+}
+function resolveProductWebOrigin(explicit) {
+  return normalizeApiOrigin(
+    explicit ?? process.env["BUILDCADE_PRODUCT_WEB_URL"] ?? PRODUCTION_PRODUCT_WEB_URL
   );
 }
 function resolveLoginApiOrigin(explicit, dev) {
@@ -5721,6 +5831,55 @@ async function saveCredentials(credentials, dir = DEFAULT_CREDENTIALS_DIR) {
   } catch {
   }
 }
+async function removeCredentials(dir = DEFAULT_CREDENTIALS_DIR, apiUrl) {
+  const file = import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME);
+  let document;
+  try {
+    document = JSON.parse(await (0, import_promises9.readFile)(file, "utf8"));
+  } catch {
+    return 0;
+  }
+  const store = isCredentialStore(document) ? document : { schemaVersion: 2, profiles: {} };
+  const origins = apiUrl ? [normalizeApiOrigin(apiUrl)] : Object.keys(store.profiles);
+  let removed = 0;
+  if (isLegacyCredentials(document)) {
+    const legacyOrigin = normalizeApiOrigin(document.apiUrl);
+    if (!apiUrl || origins.includes(legacyOrigin)) removed = 1;
+  }
+  for (const origin of origins) {
+    if (store.profiles[origin]) {
+      delete store.profiles[origin];
+      removed += 1;
+    }
+  }
+  if (removed === 0) return 0;
+  await (0, import_promises9.mkdir)(dir, { recursive: true });
+  await (0, import_promises9.writeFile)(file, JSON.stringify(store, null, 2) + "\n", "utf8");
+  try {
+    await (0, import_promises9.chmod)(file, 384);
+  } catch {
+  }
+  return removed;
+}
+
+// src/output/locale.ts
+function normalize(value) {
+  const locale = value?.replace("_", "-").toLowerCase();
+  if (!locale) return null;
+  if (locale.startsWith("zh-tw") || locale.startsWith("zh-hk")) return "zh-TW";
+  if (locale.startsWith("zh")) return "zh-CN";
+  if (locale.startsWith("en")) return "en";
+  return null;
+}
+function cliLocale(argv = process.argv) {
+  const index = argv.findIndex((item) => item === "--locale");
+  const inline = argv.find((item) => item.startsWith("--locale="))?.slice(9);
+  return normalize(index >= 0 ? argv[index + 1] : inline) ?? normalize(process.env["LC_ALL"] ?? process.env["LANG"]) ?? normalize(Intl.DateTimeFormat().resolvedOptions().locale) ?? "en";
+}
+function human(en, zhCN, zhTW) {
+  const locale = cliLocale();
+  return locale === "zh-CN" ? zhCN : locale === "zh-TW" ? zhTW : en;
+}
 
 // src/commands/login.ts
 function sleep(ms) {
@@ -5732,7 +5891,7 @@ function readTokenFromStdin() {
       input: process.stdin,
       output: process.stderr
     });
-    rl.question("Token: ", (answer) => {
+    rl.question(human("Token: ", "\u4EE4\u724C\uFF1A", "\u6B0A\u6756\uFF1A"), (answer) => {
       rl.close();
       resolve(answer.trim());
     });
@@ -5763,38 +5922,49 @@ async function finishLogin(apiUrl, data, json) {
     });
   } else {
     console.log(
-      `Signed in as ${data.user?.displayName ?? data.user?.id ?? "unknown"}`
+      human(
+        `Signed in as ${data.user?.displayName ?? data.user?.id ?? "unknown"}`,
+        `\u5DF2\u767B\u5F55\u4E3A ${data.user?.displayName ?? data.user?.id ?? "\u672A\u77E5\u7528\u6237"}`,
+        `\u5DF2\u767B\u5165\u70BA ${data.user?.displayName ?? data.user?.id ?? "\u672A\u77E5\u4F7F\u7528\u8005"}`
+      )
     );
   }
 }
 async function deviceFlowLogin(opts) {
   try {
-    const start = await apiRequest(opts.apiUrl, "/api/auth/device/github/start", {
+    const start = await apiRequest(opts.apiUrl, API_AUTH_ROUTES.deviceGithubStart, {
       method: "POST",
       body: {}
     });
-    if (opts.json) {
-      printJson({
-        schemaVersion: 1,
-        command: "login",
-        ok: true,
-        result: {
-          status: "awaiting_authorization",
-          userCode: start.userCode,
-          verificationUri: start.verificationUri
-        }
-      });
-    } else {
-      console.log("Open this URL in your browser:");
+    if (!opts.json) {
+      console.log(
+        human(
+          "Open this URL in your browser:",
+          "\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00\uFF1A",
+          "\u8ACB\u5728\u700F\u89BD\u5668\u4E2D\u958B\u555F\uFF1A"
+        )
+      );
       console.log(start.verificationUri);
-      console.log(`Enter code: ${start.userCode}`);
-      console.log("Waiting for authorization...");
+      console.log(
+        human(
+          `Enter code: ${start.userCode}`,
+          `\u8F93\u5165\u4EE3\u7801\uFF1A${start.userCode}`,
+          `\u8F38\u5165\u4EE3\u78BC\uFF1A${start.userCode}`
+        )
+      );
+      console.log(
+        human(
+          "Waiting for authorization...",
+          "\u6B63\u5728\u7B49\u5F85\u6388\u6743\u2026\u2026",
+          "\u6B63\u5728\u7B49\u5F85\u6388\u6B0A\u2026\u2026"
+        )
+      );
     }
     const intervalMs = Math.max(start.interval, 5) * 1e3;
     const deadline = Date.now() + start.expiresIn * 1e3;
     while (Date.now() < deadline) {
       await sleep(intervalMs);
-      const poll = await apiRequest(opts.apiUrl, "/api/auth/device/github/poll", {
+      const poll = await apiRequest(opts.apiUrl, API_AUTH_ROUTES.deviceGithubPoll, {
         method: "POST",
         body: { stateHash: start.stateHash }
       });
@@ -5808,7 +5978,9 @@ async function deviceFlowLogin(opts) {
         return;
       }
     }
-    console.error("error: authorization timed out");
+    console.error(
+      `error: ${human("authorization timed out", "\u6388\u6743\u8D85\u65F6", "\u6388\u6B0A\u903E\u6642")}`
+    );
     process.exitCode = 5;
   } catch (err2) {
     fail(err2);
@@ -5816,13 +5988,25 @@ async function deviceFlowLogin(opts) {
 }
 async function magicLinkLogin(opts) {
   try {
-    await apiRequest(opts.apiUrl, "/api/auth/magic-link/request", {
+    await apiRequest(opts.apiUrl, API_AUTH_ROUTES.magicLinkRequest, {
       method: "POST",
       body: { email: opts.email }
     });
     if (!opts.json) {
-      console.log(`Verification link sent to ${opts.email}.`);
-      console.log("Open the link, or paste the token below:");
+      console.log(
+        human(
+          `Verification link sent to ${opts.email}.`,
+          `\u9A8C\u8BC1\u94FE\u63A5\u5DF2\u53D1\u9001\u81F3 ${opts.email}\u3002`,
+          `\u9A57\u8B49\u9023\u7D50\u5DF2\u50B3\u9001\u81F3 ${opts.email}\u3002`
+        )
+      );
+      console.log(
+        human(
+          "Open the link, or paste the token below:",
+          "\u6253\u5F00\u94FE\u63A5\uFF0C\u6216\u5728\u4E0B\u65B9\u7C98\u8D34\u4EE4\u724C\uFF1A",
+          "\u958B\u555F\u9023\u7D50\uFF0C\u6216\u5728\u4E0B\u65B9\u8CBC\u4E0A\u6B0A\u6756\uFF1A"
+        )
+      );
     }
     const token = opts.json ? "" : await readTokenFromStdin();
     if (!token) {
@@ -5832,7 +6016,7 @@ async function magicLinkLogin(opts) {
       process.exitCode = 2;
       return;
     }
-    const verified = await apiRequest(opts.apiUrl, "/api/auth/magic-link/verify", {
+    const verified = await apiRequest(opts.apiUrl, API_AUTH_ROUTES.magicLinkVerify, {
       method: "POST",
       body: { token }
     });
@@ -5876,7 +6060,7 @@ function registerLoginCommand(program3) {
 }
 async function devLogin(apiUrl, json) {
   try {
-    const data = await apiRequest(apiUrl, "/api/auth/cli/login", { method: "POST", body: {} });
+    const data = await apiRequest(apiUrl, API_AUTH_ROUTES.cliLogin, { method: "POST", body: {} });
     await finishLogin(apiUrl, data, json);
   } catch (err2) {
     fail(err2);
@@ -5915,8 +6099,14 @@ function registerWhoamiCommand(program3) {
           result: { authenticated: false, apiUrl }
         });
       } else {
-        console.log("Not signed in.");
-        console.log(`No credentials for ${apiUrl}.`);
+        console.log(human("Not signed in.", "\u5C1A\u672A\u767B\u5F55\u3002", "\u5C1A\u672A\u767B\u5165\u3002"));
+        console.log(
+          human(
+            `No credentials for ${apiUrl}.`,
+            `${apiUrl} \u6CA1\u6709\u5DF2\u4FDD\u5B58\u7684\u51ED\u636E\u3002`,
+            `${apiUrl} \u6C92\u6709\u5DF2\u5132\u5B58\u7684\u6191\u64DA\u3002`
+          )
+        );
         console.log(
           `Run: buildcade login${opts.apiUrl ? ` --api-url ${apiUrl}` : ""}`
         );
@@ -5939,8 +6129,20 @@ function registerWhoamiCommand(program3) {
           }
         });
       } else {
-        console.log(`Signed in as ${me.user.displayName ?? me.user.id}`);
-        console.log(`Workspace: ${me.workspace.id}`);
+        console.log(
+          human(
+            `Signed in as ${me.user.displayName ?? me.user.id}`,
+            `\u5DF2\u767B\u5F55\u4E3A ${me.user.displayName ?? me.user.id}`,
+            `\u5DF2\u767B\u5165\u70BA ${me.user.displayName ?? me.user.id}`
+          )
+        );
+        console.log(
+          human(
+            `Workspace: ${me.workspace.id}`,
+            `\u5DE5\u4F5C\u533A\uFF1A${me.workspace.id}`,
+            `\u5DE5\u4F5C\u5340\uFF1A${me.workspace.id}`
+          )
+        );
       }
     } catch (err2) {
       console.error(`error: ${err2.message}`);
@@ -5951,24 +6153,357 @@ function registerWhoamiCommand(program3) {
 
 // src/commands/upload.ts
 var import_node_crypto2 = require("node:crypto");
+var import_node_path12 = __toESM(require("node:path"), 1);
+
+// src/commands/resource-context.ts
+var import_promises11 = require("node:readline/promises");
+var import_node_path11 = __toESM(require("node:path"), 1);
+
+// src/project/association.ts
+var import_promises10 = require("node:fs/promises");
 var import_node_path10 = __toESM(require("node:path"), 1);
-async function waitForBuild(apiUrl, token, buildId, timeoutMs = 12e4) {
+var ASSOCIATION_PATH = import_node_path10.default.join(".buildcade", "project.json");
+function isAssociation(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const item = value;
+  return item["schemaVersion"] === 1 && typeof item["apiUrl"] === "string" && typeof item["workspaceId"] === "string" && typeof item["gameId"] === "string" && typeof item["gameName"] === "string";
+}
+async function loadProjectAssociation(root) {
+  try {
+    const value = JSON.parse(
+      await (0, import_promises10.readFile)(import_node_path10.default.join(root, ASSOCIATION_PATH), "utf8")
+    );
+    if (!isAssociation(value)) {
+      throw new Error(
+        "Project link is invalid. Run buildcade games unlink, then buildcade games link."
+      );
+    }
+    return { ...value, apiUrl: normalizeApiOrigin(value.apiUrl) };
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+async function saveProjectAssociation(root, association) {
+  const directory = import_node_path10.default.join(root, ".buildcade");
+  await (0, import_promises10.mkdir)(directory, { recursive: true });
+  await (0, import_promises10.writeFile)(
+    import_node_path10.default.join(root, ASSOCIATION_PATH),
+    JSON.stringify(
+      { ...association, apiUrl: normalizeApiOrigin(association.apiUrl) },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+}
+async function unlinkProject(root) {
+  const { rm: rm2 } = await import("node:fs/promises");
+  try {
+    await rm2(import_node_path10.default.join(root, ASSOCIATION_PATH));
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+// src/commands/resource-context.ts
+async function requireResourceContext(requestedApiUrl) {
+  const apiUrl = resolveApiOrigin(requestedApiUrl);
+  const credentials = await loadCredentials(void 0, apiUrl);
+  if (!credentials?.token || !credentials.workspace?.id) {
+    const command = `buildcade login${requestedApiUrl ? ` --api-url ${apiUrl}` : ""}`;
+    throw new Error(
+      human(
+        `Sign in first: ${command}`,
+        `\u8BF7\u5148\u767B\u5F55\uFF1A${command}`,
+        `\u8ACB\u5148\u767B\u5165\uFF1A${command}`
+      )
+    );
+  }
+  return {
+    apiUrl,
+    token: credentials.token,
+    workspaceId: credentials.workspace.id
+  };
+}
+async function listGames(context) {
+  return (await apiRequest(context.apiUrl, "/api/games", {
+    token: context.token
+  })).games;
+}
+async function resolveGame(context, input) {
+  const root = import_node_path11.default.resolve(input.root ?? process.cwd());
+  const association = await loadProjectAssociation(root);
+  if (association && (association.apiUrl !== context.apiUrl || association.workspaceId !== context.workspaceId)) {
+    throw new Error(
+      human(
+        "This project link belongs to a different API or workspace. Run buildcade games link --game <id-or-name> to replace it.",
+        "\u6B64\u9879\u76EE\u5173\u8054\u5C5E\u4E8E\u5176\u4ED6 API \u6216\u5DE5\u4F5C\u533A\u3002\u8BF7\u8FD0\u884C buildcade games link --game <id-or-name> \u91CD\u65B0\u5173\u8054\u3002",
+        "\u6B64\u5C08\u6848\u95DC\u806F\u5C6C\u65BC\u5176\u4ED6 API \u6216\u5DE5\u4F5C\u5340\u3002\u8ACB\u57F7\u884C buildcade games link --game <id-or-name> \u91CD\u65B0\u95DC\u806F\u3002"
+      )
+    );
+  }
+  const games = await listGames(context);
+  const requested = input.game ?? association?.gameId;
+  if (requested) {
+    const matches = games.filter(
+      (game) => game.id === requested || game.name === requested
+    );
+    if (matches.length === 1) return { game: matches[0], association };
+    if (matches.length > 1) {
+      throw new Error(
+        human(
+          `More than one game is named "${requested}". Use a game ID.`,
+          `\u6709\u591A\u4E2A\u6E38\u620F\u540D\u4E3A\u201C${requested}\u201D\u3002\u8BF7\u4F7F\u7528\u6E38\u620F ID\u3002`,
+          `\u6709\u591A\u500B\u904A\u6232\u540D\u70BA\u300C${requested}\u300D\u3002\u8ACB\u4F7F\u7528\u904A\u6232 ID\u3002`
+        )
+      );
+    }
+    throw new Error(
+      human(
+        `Game not found: ${requested}`,
+        `\u627E\u4E0D\u5230\u6E38\u620F\uFF1A${requested}`,
+        `\u627E\u4E0D\u5230\u904A\u6232\uFF1A${requested}`
+      )
+    );
+  }
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new Error(
+      human(
+        "No game selected. Use --game <id-or-name> or run buildcade games link.",
+        "\u5C1A\u672A\u9009\u62E9\u6E38\u620F\u3002\u8BF7\u4F7F\u7528 --game <id-or-name> \u6216\u8FD0\u884C buildcade games link\u3002",
+        "\u5C1A\u672A\u9078\u64C7\u904A\u6232\u3002\u8ACB\u4F7F\u7528 --game <id-or-name> \u6216\u57F7\u884C buildcade games link\u3002"
+      )
+    );
+  }
+  if (games.length === 0)
+    throw new Error(
+      human(
+        "No games found. Run buildcade games create --name <name>.",
+        "\u8FD8\u6CA1\u6709\u6E38\u620F\u3002\u8BF7\u8FD0\u884C buildcade games create --name <name>\u3002",
+        "\u9084\u6C92\u6709\u904A\u6232\u3002\u8ACB\u57F7\u884C buildcade games create --name <name>\u3002"
+      )
+    );
+  process.stderr.write(
+    human("Choose a game:\n", "\u9009\u62E9\u6E38\u620F\uFF1A\n", "\u9078\u64C7\u904A\u6232\uFF1A\n")
+  );
+  games.forEach(
+    (game, index) => process.stderr.write(`${index + 1}. ${game.name} (${game.id})
+`)
+  );
+  const readline = (0, import_promises11.createInterface)({
+    input: process.stdin,
+    output: process.stderr
+  });
+  const answer = await readline.question(
+    human("Game number: ", "\u6E38\u620F\u5E8F\u53F7\uFF1A", "\u904A\u6232\u5E8F\u865F\uFF1A")
+  );
+  readline.close();
+  const selected = games[Number.parseInt(answer, 10) - 1];
+  if (!selected)
+    throw new Error(
+      human("Invalid game selection.", "\u6E38\u620F\u9009\u62E9\u65E0\u6548\u3002", "\u904A\u6232\u9078\u64C7\u7121\u6548\u3002")
+    );
+  return { game: selected, association };
+}
+var creatorCenterUrl = (gameId, buildId, locale = cliLocale()) => `${resolveProductWebOrigin()}${buildId ? productRoutes.build(locale, gameId, buildId) : productRoutes.game(locale, gameId)}`;
+
+// src/commands/builds.ts
+async function openUrl(url) {
+  if (!process.stdout.isTTY) {
+    throw new Error(
+      human(
+        "--open requires an interactive terminal.",
+        "--open \u9700\u8981\u4EA4\u4E92\u5F0F\u7EC8\u7AEF\u3002",
+        "--open \u9700\u8981\u4E92\u52D5\u5F0F\u7D42\u7AEF\u3002"
+      )
+    );
+  }
+  const { spawn: spawn2 } = await import("node:child_process");
+  const command = process.platform === "win32" ? "cmd" : process.platform === "darwin" ? "open" : "xdg-open";
+  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  spawn2(command, args, {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: true
+  }).unref();
+}
+async function waitForBuild(apiUrl, token, buildId, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const status = await apiRequest(
+    const response = await apiRequest(
       apiUrl,
       `/api/builds/${buildId}`,
       { token }
     );
-    if (["ready", "failed", "quarantined"].includes(status.build.status)) {
-      return status;
-    }
+    if (["ready", "failed", "quarantined"].includes(response.build.status))
+      return response;
     await new Promise((resolve) => setTimeout(resolve, 1e3));
   }
-  throw new ApiError("Timed out waiting for build processing.", 0);
+  throw new Error(
+    human(
+      "Timed out waiting for build processing.",
+      "\u7B49\u5F85\u6784\u5EFA\u5904\u7406\u8D85\u65F6\u3002",
+      "\u7B49\u5F85\u5EFA\u7F6E\u8655\u7406\u903E\u6642\u3002"
+    )
+  );
+}
+function registerBuildCommands(program3) {
+  const builds = program3.command("builds").description(
+    human("Inspect uploaded builds", "\u67E5\u770B\u5DF2\u4E0A\u4F20\u7684\u6784\u5EFA", "\u67E5\u770B\u5DF2\u4E0A\u50B3\u7684\u5EFA\u7F6E")
+  );
+  builds.command("list").description(
+    human("List builds for a game", "\u5217\u51FA\u6E38\u620F\u7684\u6784\u5EFA", "\u5217\u51FA\u904A\u6232\u7684\u5EFA\u7F6E")
+  ).option("--game <id-or-name>", "game ID or unique name").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").action(
+    async (opts) => {
+      try {
+        const context = await requireResourceContext(opts.apiUrl);
+        const { game } = await resolveGame(context, { game: opts.game });
+        const response = await apiRequest(
+          context.apiUrl,
+          `/api/games/${encodeURIComponent(game.id)}/builds`,
+          { token: context.token }
+        );
+        if (opts.json)
+          printJson({
+            schemaVersion: 1,
+            command: "builds list",
+            ok: true,
+            result: { game, builds: response.builds }
+          });
+        else if (response.builds.length === 0)
+          console.log(
+            human(
+              `No builds for ${game.name}.`,
+              `${game.name} \u8FD8\u6CA1\u6709\u6784\u5EFA\u3002`,
+              `${game.name} \u9084\u6C92\u6709\u5EFA\u7F6E\u3002`
+            )
+          );
+        else
+          response.builds.forEach(
+            (build) => console.log(
+              `#${build.buildNumber}	${build.status}	${build.id}`
+            )
+          );
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+      }
+    }
+  );
+  builds.command("show <build>").description(
+    human(
+      "Show a build by ID or build number",
+      "\u6309 ID \u6216\u7F16\u53F7\u67E5\u770B\u6784\u5EFA",
+      "\u4F9D ID \u6216\u7DE8\u865F\u67E5\u770B\u5EFA\u7F6E"
+    )
+  ).option("--game <id-or-name>", "game ID or unique name").option("--wait", "wait for processing to finish").option("--timeout <seconds>", "wait timeout in seconds", "120").option("--open", "open the build in Creator Center").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").action(
+    async (buildArg, opts) => {
+      try {
+        const timeoutSeconds = Number(opts.timeout);
+        if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+          throw new Error(
+            human(
+              "--timeout must be a positive number of seconds.",
+              "--timeout \u5FC5\u987B\u662F\u6B63\u6570\u79D2\u3002",
+              "--timeout \u5FC5\u9808\u662F\u6B63\u6578\u79D2\u3002"
+            )
+          );
+        }
+        const context = await requireResourceContext(opts.apiUrl);
+        const { game } = await resolveGame(context, { game: opts.game });
+        let buildId = buildArg;
+        if (/^#?\d+$/.test(buildArg)) {
+          const response2 = await apiRequest(
+            context.apiUrl,
+            `/api/games/${encodeURIComponent(game.id)}/builds`,
+            { token: context.token }
+          );
+          const number = Number(buildArg.replace("#", ""));
+          const match = response2.builds.find(
+            (item) => item.buildNumber === number
+          );
+          if (!match)
+            throw new Error(
+              human(
+                `Build #${number} not found.`,
+                `\u627E\u4E0D\u5230\u6784\u5EFA #${number}\u3002`,
+                `\u627E\u4E0D\u5230\u5EFA\u7F6E #${number}\u3002`
+              )
+            );
+          buildId = match.id;
+        }
+        const response = opts.wait ? await waitForBuild(
+          context.apiUrl,
+          context.token,
+          buildId,
+          timeoutSeconds * 1e3
+        ) : await apiRequest(
+          context.apiUrl,
+          `/api/builds/${encodeURIComponent(buildId)}`,
+          { token: context.token }
+        );
+        if (response.build.gameId !== game.id) {
+          throw new Error(
+            human(
+              "That build belongs to a different game.",
+              "\u8BE5\u6784\u5EFA\u5C5E\u4E8E\u5176\u4ED6\u6E38\u620F\u3002",
+              "\u8A72\u5EFA\u7F6E\u5C6C\u65BC\u5176\u4ED6\u904A\u6232\u3002"
+            )
+          );
+        }
+        const url = creatorCenterUrl(
+          response.build.gameId,
+          response.build.id
+        );
+        if (opts.open && !opts.json) await openUrl(url);
+        if (opts.json)
+          printJson({
+            schemaVersion: 1,
+            command: "builds show",
+            ok: true,
+            result: { ...response, creatorCenterUrl: url }
+          });
+        else {
+          console.log(
+            human(
+              `Build #${response.build.buildNumber}: ${response.build.status}`,
+              `\u6784\u5EFA #${response.build.buildNumber}\uFF1A${response.build.status}`,
+              `\u5EFA\u7F6E #${response.build.buildNumber}\uFF1A${response.build.status}`
+            )
+          );
+          console.log(`View: ${url}`);
+        }
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+      }
+    }
+  );
+}
+
+// src/commands/upload.ts
+async function createUploadSession(apiUrl, token, body) {
+  try {
+    return await apiRequest(apiUrl, "/api/upload-sessions", {
+      method: "POST",
+      token,
+      body
+    });
+  } catch (error) {
+    const apiError = error;
+    if (apiError.status !== 0 && apiError.status < 500) throw error;
+    return apiRequest(apiUrl, "/api/upload-sessions", {
+      method: "POST",
+      token,
+      body
+    });
+  }
 }
 function registerUploadCommand(program3) {
-  program3.command("upload [dir]").description("Validate, pack and upload an artifact to Buildcade").requiredOption("--game <id>", "target game id").option("--json", "machine-readable output").option("--wait", "wait for build processing to finish").option("--api-url <url>", "API base origin").action(
+  program3.command("upload [dir]").description("Validate, pack and upload an artifact to Buildcade").option("--game <id-or-name>", "target game ID or unique name").option("--json", "machine-readable output").option("--wait", "wait for build processing to finish").option("--timeout <seconds>", "wait timeout in seconds", "120").option("--open", "open the build in Creator Center").option("--api-url <url>", "API base origin").action(
     async (dirArg, opts) => {
       let apiUrl;
       try {
@@ -5979,7 +6514,7 @@ function registerUploadCommand(program3) {
         return;
       }
       reportApiTarget(apiUrl);
-      const root = import_node_path10.default.resolve(process.cwd(), dirArg ?? ".");
+      const root = import_node_path12.default.resolve(process.cwd(), dirArg ?? ".");
       const validation = await validateProject(root);
       if (validation.validation === "fail") {
         process.stderr.write(
@@ -6017,17 +6552,29 @@ function registerUploadCommand(program3) {
         return;
       }
       try {
+        const timeoutSeconds = Number(opts.timeout);
+        if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+          throw new Error(
+            human(
+              "--timeout must be a positive number of seconds.",
+              "--timeout \u5FC5\u987B\u662F\u6B63\u6570\u79D2\u3002",
+              "--timeout \u5FC5\u9808\u662F\u6B63\u6578\u79D2\u3002"
+            )
+          );
+        }
+        const context = await requireResourceContext(opts.apiUrl);
+        const { game } = await resolveGame(context, {
+          game: opts.game,
+          root
+        });
         const zip = await createArtifactZip(root);
         const sha256 = (0, import_node_crypto2.createHash)("sha256").update(zip.bytes).digest("hex");
         const sizeBytes = zip.bytes.length;
-        const session = await apiRequest(apiUrl, "/api/upload-sessions", {
-          method: "POST",
-          token: credentials.token,
-          body: {
-            gameId: opts.game,
-            expectedSizeBytes: sizeBytes,
-            expectedHash: sha256
-          }
+        const session = await createUploadSession(apiUrl, credentials.token, {
+          gameId: game.id,
+          expectedSizeBytes: sizeBytes,
+          expectedHash: sha256,
+          idempotencyKey: (0, import_node_crypto2.randomUUID)()
         });
         await apiRequest(
           apiUrl,
@@ -6051,9 +6598,12 @@ function registerUploadCommand(program3) {
           const status = await waitForBuild(
             apiUrl,
             credentials.token,
-            completed.build.id
+            completed.build.id,
+            timeoutSeconds * 1e3
           );
           const terminal = status.build.status;
+          const url2 = creatorCenterUrl(completed.gameId, completed.build.id);
+          if (opts.open && !opts.json) await openUrl(url2);
           if (terminal === "ready") {
             if (opts.json) {
               printJson({
@@ -6065,12 +6615,20 @@ function registerUploadCommand(program3) {
                   buildId: completed.build.id,
                   buildNumber: completed.build.buildNumber,
                   artifactHash: completed.artifactHash,
-                  status: terminal
+                  status: terminal,
+                  creatorCenterUrl: url2
                 },
                 diagnostics: []
               });
             } else {
-              console.log(`Build #${completed.build.buildNumber} is Ready.`);
+              console.log(
+                human(
+                  `Build #${completed.build.buildNumber} is Ready.`,
+                  `\u6784\u5EFA #${completed.build.buildNumber} \u5DF2\u5C31\u7EEA\u3002`,
+                  `\u5EFA\u7F6E #${completed.build.buildNumber} \u5DF2\u5C31\u7DD2\u3002`
+                )
+              );
+              console.log(`View: ${url2}`);
             }
             return;
           }
@@ -6084,7 +6642,8 @@ function registerUploadCommand(program3) {
                 buildId: completed.build.id,
                 buildNumber: completed.build.buildNumber,
                 artifactHash: completed.artifactHash,
-                status: terminal
+                status: terminal,
+                creatorCenterUrl: url2
               },
               diagnostics: status.diagnostics
             });
@@ -6098,6 +6657,8 @@ function registerUploadCommand(program3) {
           process.exitCode = 6;
           return;
         }
+        const url = creatorCenterUrl(completed.gameId, completed.build.id);
+        if (opts.open && !opts.json) await openUrl(url);
         if (opts.json) {
           printJson({
             schemaVersion: 1,
@@ -6108,16 +6669,23 @@ function registerUploadCommand(program3) {
               buildId: completed.build.id,
               buildNumber: completed.build.buildNumber,
               artifactHash: completed.artifactHash,
-              status: "processing"
+              status: "processing",
+              creatorCenterUrl: url
             }
           });
         } else {
-          console.log(`Build #${completed.build.buildNumber} uploaded.`);
+          console.log(
+            human(
+              `Build #${completed.build.buildNumber} uploaded.`,
+              `\u6784\u5EFA #${completed.build.buildNumber} \u5DF2\u4E0A\u4F20\u3002`,
+              `\u5EFA\u7F6E #${completed.build.buildNumber} \u5DF2\u4E0A\u50B3\u3002`
+            )
+          );
           console.log("");
-          console.log("Status:");
-          console.log("Processing");
+          console.log(human("Status:", "\u72B6\u6001\uFF1A", "\u72C0\u614B\uFF1A"));
+          console.log(human("Processing", "\u5904\u7406\u4E2D", "\u8655\u7406\u4E2D"));
           console.log("");
-          console.log(`View: ${apiUrl}/api/builds/${completed.build.id}`);
+          console.log(`View: ${url}`);
         }
       } catch (err2) {
         const error = err2;
@@ -6130,13 +6698,13 @@ function registerUploadCommand(program3) {
 
 // src/commands/skill.ts
 var import_node_crypto3 = require("node:crypto");
-var import_promises10 = require("node:fs/promises");
+var import_promises12 = require("node:fs/promises");
 var import_node_os2 = require("node:os");
-var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_path13 = __toESM(require("node:path"), 1);
 var SKILL_NAME = "buildcade-creator";
 async function exists(target) {
   try {
-    await (0, import_promises10.stat)(target);
+    await (0, import_promises12.stat)(target);
     return true;
   } catch {
     return false;
@@ -6144,23 +6712,23 @@ async function exists(target) {
 }
 function packageRoot() {
   const override = process.env["BUILDCADE_PUBLIC_PACKAGE_ROOT"];
-  if (override) return import_node_path11.default.resolve(override);
+  if (override) return import_node_path13.default.resolve(override);
   const executable = process.argv[1];
   if (!executable) throw new Error("Unable to locate the public package root.");
-  return import_node_path11.default.resolve(import_node_path11.default.dirname(executable), "..");
+  return import_node_path13.default.resolve(import_node_path13.default.dirname(executable), "..");
 }
 function agentSkillRoot(agent) {
   switch (agent.toLowerCase()) {
     case "codex": {
       const codexHome = process.env["CODEX_HOME"];
-      return codexHome ? import_node_path11.default.join(import_node_path11.default.resolve(codexHome), "skills") : import_node_path11.default.join((0, import_node_os2.homedir)(), ".codex", "skills");
+      return codexHome ? import_node_path13.default.join(import_node_path13.default.resolve(codexHome), "skills") : import_node_path13.default.join((0, import_node_os2.homedir)(), ".codex", "skills");
     }
     case "claude":
-      return import_node_path11.default.join((0, import_node_os2.homedir)(), ".claude", "skills");
+      return import_node_path13.default.join((0, import_node_os2.homedir)(), ".claude", "skills");
     case "cursor":
-      return import_node_path11.default.join((0, import_node_os2.homedir)(), ".cursor", "skills");
+      return import_node_path13.default.join((0, import_node_os2.homedir)(), ".cursor", "skills");
     case "agents":
-      return import_node_path11.default.join((0, import_node_os2.homedir)(), ".agents", "skills");
+      return import_node_path13.default.join((0, import_node_os2.homedir)(), ".agents", "skills");
     default:
       throw new Error(
         `Unsupported agent preset: ${agent}. Use --target <agent-skill-directory>.`
@@ -6171,12 +6739,12 @@ function destinationRoot(options) {
   if (options.target && options.agent) {
     throw new Error("Use either --agent or --target, not both.");
   }
-  if (options.target) return import_node_path11.default.resolve(options.target);
+  if (options.target) return import_node_path13.default.resolve(options.target);
   return agentSkillRoot(options.agent ?? "codex");
 }
 async function releaseVersion(root) {
   const manifest = JSON.parse(
-    await (0, import_promises10.readFile)(import_node_path11.default.join(root, "RELEASE-MANIFEST.json"), "utf8")
+    await (0, import_promises12.readFile)(import_node_path13.default.join(root, "RELEASE-MANIFEST.json"), "utf8")
   );
   if (typeof manifest.release !== "string" || !/^v\d+\.\d+\.\d+$/.test(manifest.release)) {
     throw new Error("Public release manifest has an invalid version.");
@@ -6184,8 +6752,8 @@ async function releaseVersion(root) {
   return manifest.release;
 }
 async function verifyRelease(root) {
-  const checksumFile = import_node_path11.default.join(root, "SHA256SUMS");
-  const lines = (await (0, import_promises10.readFile)(checksumFile, "utf8")).split(/\r?\n/u).filter(Boolean);
+  const checksumFile = import_node_path13.default.join(root, "SHA256SUMS");
+  const lines = (await (0, import_promises12.readFile)(checksumFile, "utf8")).split(/\r?\n/u).filter(Boolean);
   if (lines.length === 0)
     throw new Error("Public release checksum list is empty.");
   const verified = /* @__PURE__ */ new Set();
@@ -6194,12 +6762,12 @@ async function verifyRelease(root) {
     if (!match?.groups)
       throw new Error("Public release checksum list is malformed.");
     const relative = match.groups["relative"];
-    const target = import_node_path11.default.resolve(root, ...relative.split("/"));
-    const prefix = `${import_node_path11.default.resolve(root)}${import_node_path11.default.sep}`;
+    const target = import_node_path13.default.resolve(root, ...relative.split("/"));
+    const prefix = `${import_node_path13.default.resolve(root)}${import_node_path13.default.sep}`;
     if (!target.startsWith(prefix))
       throw new Error("Release checksum path escaped its root.");
     if (!await exists(target)) continue;
-    const actual = (0, import_node_crypto3.createHash)("sha256").update(await (0, import_promises10.readFile)(target)).digest("hex");
+    const actual = (0, import_node_crypto3.createHash)("sha256").update(await (0, import_promises12.readFile)(target)).digest("hex");
     if (actual !== match.groups["hash"]) {
       throw new Error(`Release checksum mismatch: ${relative}`);
     }
@@ -6233,13 +6801,13 @@ async function installSkill(options) {
   const root = packageRoot();
   await verifyRelease(root);
   const release = await releaseVersion(root);
-  const source = import_node_path11.default.join(root, "skills", SKILL_NAME);
+  const source = import_node_path13.default.join(root, "skills", SKILL_NAME);
   const skillRoot = destinationRoot(options);
-  const target = import_node_path11.default.join(skillRoot, SKILL_NAME);
-  if (!await exists(import_node_path11.default.join(source, "SKILL.md"))) {
+  const target = import_node_path13.default.join(skillRoot, SKILL_NAME);
+  if (!await exists(import_node_path13.default.join(source, "SKILL.md"))) {
     throw new Error("Packaged Buildcade Creator Skill is missing.");
   }
-  await (0, import_promises10.mkdir)(skillRoot, { recursive: true });
+  await (0, import_promises12.mkdir)(skillRoot, { recursive: true });
   let backup;
   if (await exists(target)) {
     if (!options.upgrade) {
@@ -6248,23 +6816,23 @@ async function installSkill(options) {
       );
     }
     backup = await unusedBackupPath(target, release);
-    await (0, import_promises10.rename)(target, backup);
+    await (0, import_promises12.rename)(target, backup);
   }
   try {
-    await (0, import_promises10.cp)(source, target, {
+    await (0, import_promises12.cp)(source, target, {
       recursive: true,
       errorOnExist: true,
       force: false
     });
-    await (0, import_promises10.writeFile)(
-      import_node_path11.default.join(target, ".buildcade-install.json"),
+    await (0, import_promises12.writeFile)(
+      import_node_path13.default.join(target, ".buildcade-install.json"),
       `${JSON.stringify({ schemaVersion: 1, release, source: "github:yatianxu/buildcade-skills" }, null, 2)}
 `,
       "utf8"
     );
   } catch (error) {
-    await (0, import_promises10.rm)(target, { recursive: true, force: true });
-    if (backup) await (0, import_promises10.rename)(backup, target);
+    await (0, import_promises12.rm)(target, { recursive: true, force: true });
+    if (backup) await (0, import_promises12.rename)(backup, target);
     throw error;
   }
   return { target, ...backup ? { backup } : {}, release };
@@ -6272,7 +6840,7 @@ async function installSkill(options) {
 function registerSkillCommands(program3) {
   const skill = program3.command("skill").description("Install the Buildcade Creator Skill");
   skill.command("location").description("Show the Skill installation destination").option("--agent <name>", "agent preset: codex, claude, cursor, or agents").option("--target <directory>", "explicit agent Skill directory").option("--json", "machine-readable output").action((options) => {
-    const target = import_node_path11.default.join(destinationRoot(options), SKILL_NAME);
+    const target = import_node_path13.default.join(destinationRoot(options), SKILL_NAME);
     if (options.json) {
       printJson({
         schemaVersion: 1,
@@ -6310,10 +6878,218 @@ function registerSkillCommands(program3) {
   });
 }
 
+// src/commands/games.ts
+var import_node_path14 = __toESM(require("node:path"), 1);
+function fail2(error) {
+  console.error(`error: ${error.message}`);
+  process.exitCode = 2;
+}
+function registerGameCommands(program3) {
+  const games = program3.command("games").description(
+    human(
+      "Manage your Buildcade games",
+      "\u7BA1\u7406\u4F60\u7684 Buildcade \u6E38\u620F",
+      "\u7BA1\u7406\u4F60\u7684 Buildcade \u904A\u6232"
+    )
+  );
+  games.command("list").description(
+    human(
+      "List games in the current workspace",
+      "\u5217\u51FA\u5F53\u524D\u5DE5\u4F5C\u533A\u7684\u6E38\u620F",
+      "\u5217\u51FA\u76EE\u524D\u5DE5\u4F5C\u5340\u7684\u904A\u6232"
+    )
+  ).option("--json", "machine-readable output").option("--api-url <url>", "API base origin").action(async (opts) => {
+    try {
+      const context = await requireResourceContext(opts.apiUrl);
+      const items = await listGames(context);
+      if (opts.json) {
+        printJson({
+          schemaVersion: 1,
+          command: "games list",
+          ok: true,
+          result: { games: items }
+        });
+        return;
+      }
+      if (items.length === 0)
+        return void console.log(
+          human("No games yet.", "\u8FD8\u6CA1\u6709\u6E38\u620F\u3002", "\u9084\u6C92\u6709\u904A\u6232\u3002")
+        );
+      items.forEach(
+        (game) => console.log(
+          `${game.name}	${game.id}	${game.lifecycleStatus ?? game.status ?? ""}`
+        )
+      );
+    } catch (error) {
+      fail2(error);
+    }
+  });
+  games.command("create").description(
+    human(
+      "Create a game and link it to a project",
+      "\u521B\u5EFA\u6E38\u620F\u5E76\u5173\u8054\u9879\u76EE",
+      "\u5EFA\u7ACB\u904A\u6232\u4E26\u95DC\u806F\u5C08\u6848"
+    )
+  ).requiredOption("--name <name>", "game name").option("--project <dir>", "project directory", ".").option("--no-link", "do not link the project").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").action(
+    async (opts) => {
+      try {
+        const context = await requireResourceContext(opts.apiUrl);
+        const { game } = await apiRequest(
+          context.apiUrl,
+          "/api/games",
+          {
+            method: "POST",
+            token: context.token,
+            body: { name: opts.name }
+          }
+        );
+        const root = import_node_path14.default.resolve(opts.project);
+        if (opts.link) {
+          await saveProjectAssociation(root, {
+            schemaVersion: 1,
+            apiUrl: context.apiUrl,
+            workspaceId: context.workspaceId,
+            gameId: game.id,
+            gameName: game.name
+          });
+        }
+        if (opts.json)
+          printJson({
+            schemaVersion: 1,
+            command: "games create",
+            ok: true,
+            result: { game, linkedProject: opts.link ? root : null }
+          });
+        else
+          console.log(
+            human(
+              `Created ${game.name} (${game.id})${opts.link ? ` and linked ${root}` : ""}.`,
+              `\u5DF2\u521B\u5EFA ${game.name} (${game.id})${opts.link ? `\uFF0C\u5E76\u5173\u8054 ${root}` : ""}\u3002`,
+              `\u5DF2\u5EFA\u7ACB ${game.name} (${game.id})${opts.link ? `\uFF0C\u4E26\u95DC\u806F ${root}` : ""}\u3002`
+            )
+          );
+      } catch (error) {
+        fail2(error);
+      }
+    }
+  );
+  games.command("link [dir]").description(
+    human(
+      "Link a local project to a game",
+      "\u5C06\u672C\u5730\u9879\u76EE\u5173\u8054\u5230\u6E38\u620F",
+      "\u5C07\u672C\u6A5F\u5C08\u6848\u95DC\u806F\u5230\u904A\u6232"
+    )
+  ).option("--game <id-or-name>", "game ID or unique name").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").action(
+    async (dir, opts) => {
+      try {
+        const root = import_node_path14.default.resolve(dir ?? ".");
+        const context = await requireResourceContext(opts.apiUrl);
+        const { game } = await resolveGame(context, {
+          game: opts.game,
+          root
+        });
+        await saveProjectAssociation(root, {
+          schemaVersion: 1,
+          apiUrl: context.apiUrl,
+          workspaceId: context.workspaceId,
+          gameId: game.id,
+          gameName: game.name
+        });
+        if (opts.json)
+          printJson({
+            schemaVersion: 1,
+            command: "games link",
+            ok: true,
+            result: { game, project: root }
+          });
+        else
+          console.log(
+            human(
+              `Linked ${root} to ${game.name} (${game.id}).`,
+              `\u5DF2\u5C06 ${root} \u5173\u8054\u5230 ${game.name} (${game.id})\u3002`,
+              `\u5DF2\u5C07 ${root} \u95DC\u806F\u5230 ${game.name} (${game.id})\u3002`
+            )
+          );
+      } catch (error) {
+        fail2(error);
+      }
+    }
+  );
+  games.command("unlink [dir]").description(
+    human(
+      "Remove a project's game link",
+      "\u79FB\u9664\u9879\u76EE\u7684\u6E38\u620F\u5173\u8054",
+      "\u79FB\u9664\u5C08\u6848\u7684\u904A\u6232\u95DC\u806F"
+    )
+  ).option("--json", "machine-readable output").action(async (dir, opts) => {
+    const root = import_node_path14.default.resolve(dir ?? ".");
+    const removed = await unlinkProject(root);
+    if (opts.json)
+      printJson({
+        schemaVersion: 1,
+        command: "games unlink",
+        ok: true,
+        result: { project: root, removed }
+      });
+    else
+      console.log(
+        removed ? human(
+          `Unlinked ${root}.`,
+          `\u5DF2\u53D6\u6D88 ${root} \u7684\u5173\u8054\u3002`,
+          `\u5DF2\u53D6\u6D88 ${root} \u7684\u95DC\u806F\u3002`
+        ) : human(
+          `No project link found in ${root}.`,
+          `${root} \u4E2D\u6CA1\u6709\u9879\u76EE\u5173\u8054\u3002`,
+          `${root} \u4E2D\u6C92\u6709\u5C08\u6848\u95DC\u806F\u3002`
+        )
+      );
+  });
+}
+
+// src/commands/logout.ts
+function registerLogoutCommand(program3) {
+  program3.command("logout").description(
+    human(
+      "Sign out of the Buildcade CLI",
+      "\u9000\u51FA Buildcade CLI",
+      "\u767B\u51FA Buildcade CLI"
+    )
+  ).option("--api-url <url>", "API base origin").option("--all", "remove every saved API profile").option("--json", "machine-readable output").action(
+    async (opts) => {
+      try {
+        const apiUrl = opts.all ? void 0 : resolveApiOrigin(opts.apiUrl);
+        const removed = await removeCredentials(void 0, apiUrl);
+        if (opts.json)
+          printJson({
+            schemaVersion: 1,
+            command: "logout",
+            ok: true,
+            result: { removed, apiUrl: apiUrl ?? null }
+          });
+        else
+          console.log(
+            removed ? human(
+              `Signed out${opts.all ? ` of ${removed} profiles` : ""}.`,
+              `\u5DF2\u9000\u51FA${opts.all ? ` ${removed} \u4E2A\u914D\u7F6E` : ""}\u3002`,
+              `\u5DF2\u767B\u51FA${opts.all ? ` ${removed} \u500B\u8A2D\u5B9A\u6A94` : ""}\u3002`
+            ) : human(
+              "No saved sign-in found.",
+              "\u6CA1\u6709\u5DF2\u4FDD\u5B58\u7684\u767B\u5F55\u3002",
+              "\u6C92\u6709\u5DF2\u5132\u5B58\u7684\u767B\u5165\u3002"
+            )
+          );
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+      }
+    }
+  );
+}
+
 // src/public-main.ts
 process.env["BUILDCADE_API_URL"] ??= PRODUCTION_API_URL;
 var program2 = new Command();
-program2.name("buildcade").description("Buildcade Creator tools").helpOption("-h, --help", "display help for command");
+program2.name("buildcade").description("Buildcade Creator tools").option("--locale <locale>", "human output locale: en, zh-CN, or zh-TW").helpOption("-h, --help", "display help for command");
 program2.command("version").description("Print CLI, Validator and supported Game Spec versions").action(() => {
   console.log(`Buildcade CLI ${CLI_VERSION}`);
   console.log(`Validator ${VALIDATOR_VERSION}`);
@@ -6327,6 +7103,9 @@ registerPreviewCommand(program2);
 registerLoginCommand(program2);
 registerWhoamiCommand(program2);
 registerUploadCommand(program2);
+registerGameCommands(program2);
+registerBuildCommands(program2);
+registerLogoutCommand(program2);
 program2.parseAsync(process.argv).catch((error) => {
   console.error(`error: ${error.message}`);
   process.exitCode = 9;
