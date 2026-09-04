@@ -3040,6 +3040,9 @@ var {
   Help
 } = import_index.default;
 
+// ../../packages/validator/src/version.ts
+var VALIDATOR_VERSION = "0.1.0";
+
 // ../../packages/validator/src/diagnostics.ts
 var BC_ERROR_CODES = {
   BC1001: "buildcade.json not found at artifact root.",
@@ -3050,6 +3053,7 @@ var BC_ERROR_CODES = {
   BC1006: "Invalid display configuration.",
   BC1007: "Invalid input configuration.",
   BC1008: "Invalid permissions configuration.",
+  BC1010: "Compatibility profile requirement not met.",
   BC2001: "Entry file not found.",
   BC2002: "Unsafe artifact path.",
   BC2003: "Filesystem link not allowed.",
@@ -3093,11 +3097,11 @@ function sortDiagnostics(diagnostics) {
   return [...diagnostics].sort((a, b) => {
     const severity = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
     if (severity !== 0) return severity;
-    const file = (a.file ?? "").localeCompare(b.file ?? "");
+    const file = (a.file ?? "") < (b.file ?? "") ? -1 : (a.file ?? "") > (b.file ?? "") ? 1 : 0;
     if (file !== 0) return file;
-    const field = (a.field ?? "").localeCompare(b.field ?? "");
+    const field = (a.field ?? "") < (b.field ?? "") ? -1 : (a.field ?? "") > (b.field ?? "") ? 1 : 0;
     if (field !== 0) return field;
-    return a.code.localeCompare(b.code);
+    return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
   });
 }
 
@@ -3165,14 +3169,259 @@ function normalizeManifest(manifest) {
   return normalized;
 }
 
+// ../../packages/game-compatibility/src/asset-delivery.ts
+var CONTENT_TYPES = Object.freeze({
+  ".avif": "image/avif",
+  ".bmp": "image/bmp",
+  ".css": "text/css; charset=utf-8",
+  ".csv": "text/csv; charset=utf-8",
+  ".eot": "application/vnd.ms-fontobject",
+  ".gif": "image/gif",
+  ".htm": "text/html; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".m4a": "audio/mp4",
+  ".map": "application/json; charset=utf-8",
+  ".mp3": "audio/mpeg",
+  ".mp4": "video/mp4",
+  ".oga": "audio/ogg",
+  ".ogg": "audio/ogg",
+  ".ogv": "video/ogg",
+  ".otf": "font/otf",
+  ".pdf": "application/pdf",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ttf": "font/ttf",
+  ".txt": "text/plain; charset=utf-8",
+  ".wasm": "application/wasm",
+  ".wav": "audio/wav",
+  ".webm": "video/webm",
+  ".webp": "image/webp",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".xml": "application/xml"
+});
+function resolveAssetDeliveryMetadata(relativePath) {
+  const lower = relativePath.toLowerCase();
+  const contentEncoding = lower.endsWith(".br") ? "br" : lower.endsWith(".gz") || lower.endsWith(".gzip") ? "gzip" : null;
+  const sourcePath = contentEncoding ? relativePath.slice(0, relativePath.lastIndexOf(".")) : relativePath;
+  const dot = sourcePath.lastIndexOf(".");
+  const extension = dot >= 0 ? sourcePath.slice(dot).toLowerCase() : "";
+  return {
+    contentType: CONTENT_TYPES[extension] ?? "application/octet-stream",
+    contentEncoding
+  };
+}
+
+// ../../packages/game-compatibility/src/artifact-report.ts
+var ARTIFACT_REPORT_SCHEMA_VERSION = 1;
+
+// ../../packages/game-compatibility/src/engine-evidence.ts
+var ENGINE_PROFILE_OFFICIAL_TERMS = Object.freeze({
+  "rpg-maker-mz-web-v1": "https://www.rpgmakerweb.com/eula",
+  "unity-web-v1": "https://unity.com/legal/editor-terms-of-service/software"
+});
+var COMPATIBILITY_FIXTURE_ADAPTERS = Object.freeze({
+  "generic-static-web-v1": Object.freeze({
+    profileId: "generic-static-web-v1",
+    adapterVersion: 1,
+    generatorName: "Generic Web",
+    exportTarget: "web",
+    threading: "not_applicable",
+    requiresHighConfidenceDetection: false,
+    requiresRpgMakerNotice: false,
+    officialTermsUrl: null,
+    fixtureEnvironmentVariable: "BUILDCADE_GENERIC_WEB_FIXTURE_DIR"
+  }),
+  "rpg-maker-mz-web-v1": Object.freeze({
+    profileId: "rpg-maker-mz-web-v1",
+    adapterVersion: 1,
+    generatorName: "RPG Maker MZ",
+    exportTarget: "web",
+    threading: "not_applicable",
+    requiresHighConfidenceDetection: true,
+    requiresRpgMakerNotice: true,
+    officialTermsUrl: ENGINE_PROFILE_OFFICIAL_TERMS["rpg-maker-mz-web-v1"],
+    fixtureEnvironmentVariable: "BUILDCADE_RPG_MAKER_MZ_FIXTURE_DIR"
+  }),
+  "unity-web-v1": Object.freeze({
+    profileId: "unity-web-v1",
+    adapterVersion: 1,
+    generatorName: "Unity",
+    exportTarget: "webgl",
+    threading: "disabled",
+    requiresHighConfidenceDetection: true,
+    requiresRpgMakerNotice: false,
+    officialTermsUrl: ENGINE_PROFILE_OFFICIAL_TERMS["unity-web-v1"],
+    fixtureEnvironmentVariable: "BUILDCADE_UNITY_WEB_FIXTURE_DIR"
+  })
+});
+
+// ../../packages/game-compatibility/src/index.ts
+var COMPATIBILITY_PROFILE_SCHEMA_VERSION = 1;
+var COMPATIBILITY_PROFILE_VERSION = 1;
+var ADMISSION_POLICY_VERSION = 1;
+var COMPATIBILITY_PROFILE_IDS = [
+  "generic-static-web-v1",
+  "rpg-maker-mz-web-v1",
+  "unity-web-v1"
+];
+var MEBIBYTE = 1024 * 1024;
+var PLATFORM_ADMISSION_POLICY = Object.freeze({
+  version: ADMISSION_POLICY_VERSION,
+  maxCompressedArchiveBytes: 100 * MEBIBYTE,
+  maxExtractedBytes: 512 * MEBIBYTE,
+  maxSingleFileBytes: 256 * MEBIBYTE,
+  maxFileCount: 1e4,
+  maxAggregateCompressionRatio: 100
+});
+var FORBIDDEN_FEATURES = Object.freeze([
+  "remote-executable-code",
+  "service-worker",
+  "dedicated-worker",
+  "unity-threads",
+  "native-or-server-executable"
+]);
+var DESKTOP_BROWSER_MATRIX = Object.freeze([
+  { browser: "chromium", device: "desktop", support: "formal" },
+  { browser: "firefox", device: "desktop", support: "formal" },
+  { browser: "webkit", device: "desktop", support: "formal" }
+]);
+var UNITY_BROWSER_MATRIX = Object.freeze([
+  ...DESKTOP_BROWSER_MATRIX,
+  { browser: "chromium", device: "mobile", support: "experimental" },
+  { browser: "webkit", device: "mobile", support: "experimental" }
+]);
+var profile = (value) => Object.freeze({
+  schemaVersion: COMPATIBILITY_PROFILE_SCHEMA_VERSION,
+  version: COMPATIBILITY_PROFILE_VERSION,
+  forbiddenFeatures: FORBIDDEN_FEATURES,
+  deliveryRules: Object.freeze({
+    wasm: "allowed",
+    compressedAssets: "validated-metadata-only",
+    workers: "forbidden"
+  }),
+  ...value
+});
+var COMPATIBILITY_PROFILES = Object.freeze({
+  "generic-static-web-v1": profile({
+    id: "generic-static-web-v1",
+    displayNameKey: "compatibility.profile.genericStaticWeb",
+    requiredFilePatterns: Object.freeze(["buildcade.json"]),
+    detectionSignals: Object.freeze([]),
+    browserMatrix: DESKTOP_BROWSER_MATRIX,
+    fixtureEvidence: Object.freeze({ status: "pending", version: null }),
+    definitionStatus: "evidence_pending"
+  }),
+  "rpg-maker-mz-web-v1": profile({
+    id: "rpg-maker-mz-web-v1",
+    displayNameKey: "compatibility.profile.rpgMakerMzWeb",
+    requiredFilePatterns: Object.freeze([
+      "buildcade.json",
+      "js/rmmz_core.js",
+      "js/rmmz_managers.js",
+      "data/System.json"
+    ]),
+    detectionSignals: Object.freeze([
+      "js/rmmz_core.js",
+      "js/rmmz_objects.js",
+      "data/System.json"
+    ]),
+    browserMatrix: DESKTOP_BROWSER_MATRIX,
+    fixtureEvidence: Object.freeze({ status: "pending", version: null }),
+    definitionStatus: "evidence_pending"
+  }),
+  "unity-web-v1": profile({
+    id: "unity-web-v1",
+    displayNameKey: "compatibility.profile.unityWeb",
+    requiredFilePatterns: Object.freeze([
+      "buildcade.json",
+      "**/*.loader.js",
+      "**/*.framework.js*",
+      "**/*.data*",
+      "**/*.wasm*"
+    ]),
+    detectionSignals: Object.freeze([
+      "**/*.loader.js",
+      "**/*.framework.js*",
+      "**/*.wasm*"
+    ]),
+    browserMatrix: UNITY_BROWSER_MATRIX,
+    fixtureEvidence: Object.freeze({ status: "pending", version: null }),
+    definitionStatus: "evidence_pending"
+  })
+});
+var DEFAULT_COMPATIBILITY_PROFILE_ID = "generic-static-web-v1";
+var CompatibilityProfileError = class extends Error {
+  code = "COMPATIBILITY_PROFILE_UNSUPPORTED";
+  constructor(message) {
+    super(message);
+    this.name = "CompatibilityProfileError";
+  }
+};
+function isCompatibilityProfileId(value) {
+  return COMPATIBILITY_PROFILE_IDS.includes(value);
+}
+function getCompatibilityProfile(ref) {
+  if (!isCompatibilityProfileId(ref.id)) {
+    throw new CompatibilityProfileError(
+      `Unsupported compatibility profile: ${ref.id}.`
+    );
+  }
+  const selected = COMPATIBILITY_PROFILES[ref.id];
+  if (ref.version !== selected.version) {
+    throw new CompatibilityProfileError(
+      `Unsupported compatibility profile version: ${ref.id}@${ref.version}.`
+    );
+  }
+  return selected;
+}
+function resolveCompatibilityProfileSelection(requestedProfile) {
+  const resolved = requestedProfile ?? {
+    id: DEFAULT_COMPATIBILITY_PROFILE_ID,
+    version: COMPATIBILITY_PROFILE_VERSION
+  };
+  getCompatibilityProfile(resolved);
+  return {
+    selectionMode: requestedProfile ? "explicit" : "default",
+    requestedProfile: { ...resolved }
+  };
+}
+
 // ../../packages/validator/src/artifact.ts
 var import_promises = require("node:fs/promises");
 var import_node_path = __toESM(require("node:path"), 1);
-var DEFAULT_ARTIFACT_LIMITS = {
-  maxPackageBytes: 50 * 1024 * 1024,
-  maxFileBytes: 25 * 1024 * 1024,
-  maxFileCount: 1e3
-};
+var DEFAULT_ARTIFACT_LIMITS = Object.freeze({
+  maxExtractedBytes: PLATFORM_ADMISSION_POLICY.maxExtractedBytes,
+  maxFileBytes: PLATFORM_ADMISSION_POLICY.maxSingleFileBytes,
+  maxFileCount: PLATFORM_ADMISSION_POLICY.maxFileCount
+});
+function positiveLimit(value, fallback) {
+  if (value === void 0) return fallback;
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return Math.min(value, fallback);
+}
+function resolveArtifactLimits(limits = {}) {
+  return {
+    maxExtractedBytes: positiveLimit(
+      limits.maxExtractedBytes,
+      DEFAULT_ARTIFACT_LIMITS.maxExtractedBytes
+    ),
+    maxFileBytes: positiveLimit(
+      limits.maxFileBytes,
+      DEFAULT_ARTIFACT_LIMITS.maxFileBytes
+    ),
+    maxFileCount: positiveLimit(
+      limits.maxFileCount,
+      DEFAULT_ARTIFACT_LIMITS.maxFileCount
+    )
+  };
+}
 var UNSUPPORTED_EXECUTABLE_EXTENSIONS = /* @__PURE__ */ new Set([
   ".exe",
   ".dll",
@@ -3231,7 +3480,7 @@ async function collectArtifactEntries(root) {
   return entries;
 }
 function validateArtifact(entries, limits = {}) {
-  const resolved = { ...DEFAULT_ARTIFACT_LIMITS, ...limits };
+  const resolved = resolveArtifactLimits(limits);
   const diagnostics = [];
   const lowerToPath = /* @__PURE__ */ new Map();
   for (const entry of entries) {
@@ -3297,11 +3546,11 @@ function validateArtifact(entries, limits = {}) {
     );
   }
   const total = entries.reduce((sum, entry) => sum + entry.size, 0);
-  if (total > resolved.maxPackageBytes) {
+  if (total > resolved.maxExtractedBytes) {
     diagnostics.push(
       createDiagnostic("BC2004", {
         actual: `${total} bytes`,
-        expected: `<= ${resolved.maxPackageBytes} bytes`
+        expected: `<= ${resolved.maxExtractedBytes} bytes`
       })
     );
   }
@@ -3846,8 +4095,232 @@ async function detectSecrets(entries) {
   return diagnostics;
 }
 
+// ../../packages/validator/src/profile-validation.ts
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function matchesProfileFilePattern(relPath, pattern) {
+  const normalizedPath = relPath.replaceAll("\\", "/");
+  const marker = "\0";
+  const source = escapeRegExp(pattern.replaceAll("\\", "/")).replaceAll("\\*\\*/", `${marker}DIR${marker}`).replaceAll("\\*", `${marker}STAR${marker}`).replaceAll(`${marker}DIR${marker}`, "(?:.*/)?").replaceAll(`${marker}STAR${marker}`, "[^/]*");
+  return new RegExp(`^${source}$`, "i").test(normalizedPath);
+}
+function validateCompatibilityProfile(entries, selected) {
+  const diagnostics = [];
+  for (const pattern of selected.requiredFilePatterns) {
+    if (!entries.some(
+      (entry) => matchesProfileFilePattern(entry.relPath, pattern)
+    )) {
+      diagnostics.push(
+        createDiagnostic("BC1010", {
+          field: "compatibilityProfile",
+          actual: selected.id,
+          expected: pattern,
+          suggestion: `Select the matching profile or provide required file: ${pattern}`
+        })
+      );
+    }
+  }
+  return sortDiagnostics(diagnostics);
+}
+
+// ../../packages/validator/src/artifact-report.ts
+var import_node_crypto = require("node:crypto");
+var import_node_fs = require("node:fs");
+function compareText(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+async function fingerprintArtifactDirectory(entries) {
+  const hash = (0, import_node_crypto.createHash)("sha256");
+  const sorted = [...entries].sort(
+    (left, right) => compareText(left.relPath, right.relPath)
+  );
+  for (const entry of sorted) {
+    hash.update(entry.isSymbolicLink ? "link\0" : "file\0");
+    hash.update(entry.relPath.replaceAll("\\", "/"));
+    hash.update("\0");
+    hash.update(String(entry.size));
+    hash.update("\0");
+    if (!entry.isSymbolicLink) {
+      try {
+        for await (const chunk of (0, import_node_fs.createReadStream)(entry.absPath)) {
+          hash.update(chunk);
+        }
+      } catch {
+        hash.update("unreadable\0");
+      }
+    }
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+function detectSuggestedProfile(entries) {
+  const candidates = Object.values(COMPATIBILITY_PROFILES).filter((profile2) => profile2.detectionSignals.length > 0).map((profile2) => {
+    const matched = profile2.detectionSignals.filter(
+      (pattern) => entries.some(
+        (entry) => matchesProfileFilePattern(entry.relPath, pattern)
+      )
+    );
+    return { profile: profile2, matched };
+  }).filter(({ matched }) => matched.length >= 2).sort(
+    (left, right) => right.matched.length / right.profile.detectionSignals.length - left.matched.length / left.profile.detectionSignals.length || right.matched.length - left.matched.length || compareText(left.profile.id, right.profile.id)
+  );
+  const best = candidates[0];
+  if (!best) return null;
+  return {
+    profile: { id: best.profile.id, version: best.profile.version },
+    confidence: best.matched.length === best.profile.detectionSignals.length ? "high" : "medium",
+    reasons: [...best.matched].sort(compareText)
+  };
+}
+function unencodedPath(filePath) {
+  const { contentEncoding: encoding } = resolveAssetDeliveryMetadata(filePath);
+  if (encoding === "br") return filePath.slice(0, -3);
+  if (encoding === "gzip") {
+    return filePath.toLowerCase().endsWith(".gzip") ? filePath.slice(0, -5) : filePath.slice(0, -3);
+  }
+  return filePath;
+}
+function assetMetadataRequirements(entries) {
+  return entries.filter((entry) => !entry.isSymbolicLink).map((entry) => {
+    const delivery = resolveAssetDeliveryMetadata(entry.relPath);
+    const sourcePath = unencodedPath(entry.relPath).toLowerCase();
+    return {
+      path: entry.relPath.replaceAll("\\", "/"),
+      contentType: delivery.contentType,
+      contentEncoding: delivery.contentEncoding,
+      rangeSupport: sourcePath.endsWith(".wasm") || sourcePath.endsWith(".data") || sourcePath.endsWith(".unityweb") ? "required" : "not_required"
+    };
+  }).sort((left, right) => compareText(left.path, right.path));
+}
+function reportDiagnostics(diagnostics) {
+  return diagnostics.map((diagnostic) => ({
+    code: diagnostic.code,
+    severity: diagnostic.severity,
+    messageKey: `diagnostics.code.${diagnostic.code}`,
+    ...diagnostic.file ? { filePath: diagnostic.file } : {},
+    ...diagnostic.field ? { fieldPath: diagnostic.field } : {},
+    ...diagnostic.line !== void 0 ? { lineNumber: diagnostic.line } : {},
+    ...diagnostic.column !== void 0 ? { columnNumber: diagnostic.column } : {},
+    ...diagnostic.actual !== void 0 || diagnostic.expected !== void 0 ? {
+      params: {
+        ...diagnostic.actual !== void 0 ? { actual: diagnostic.actual } : {},
+        ...diagnostic.expected !== void 0 ? { expected: diagnostic.expected } : {}
+      }
+    } : {},
+    ...diagnostic.suggestion ? { suggestionKey: `diagnostics.suggestion.${diagnostic.code}` } : {}
+  }));
+}
+function certification(result, selection, profile2) {
+  if (result === "fail") {
+    return {
+      status: "not_certified",
+      reasonCode: "ADMISSION_FAILED",
+      evidenceVersion: null
+    };
+  }
+  if (selection.selectionMode !== "explicit") {
+    return {
+      status: "not_certified",
+      reasonCode: "PROFILE_NOT_EXPLICIT",
+      evidenceVersion: null
+    };
+  }
+  if (profile2.definitionStatus !== "published") {
+    return {
+      status: "not_certified",
+      reasonCode: "PROFILE_EVIDENCE_PENDING",
+      evidenceVersion: null
+    };
+  }
+  if (profile2.fixtureEvidence.status !== "verified" || profile2.fixtureEvidence.version === null) {
+    return {
+      status: "not_certified",
+      reasonCode: "PROFILE_EVIDENCE_MISSING",
+      evidenceVersion: null
+    };
+  }
+  return {
+    status: "certified",
+    reasonCode: null,
+    evidenceVersion: profile2.fixtureEvidence.version
+  };
+}
+async function createArtifactReport(input) {
+  const extractedBytes = input.entries.reduce(
+    (sum, entry) => sum + entry.size,
+    0
+  );
+  const largest = [...input.entries].filter((entry) => !entry.isSymbolicLink).sort(
+    (left, right) => right.size - left.size || compareText(left.relPath, right.relPath)
+  )[0];
+  const lowerPaths = input.entries.map(
+    (entry) => entry.relPath.replaceAll("\\", "/").toLowerCase()
+  );
+  const codes = new Set(input.diagnostics.map((item) => item.code));
+  return {
+    schemaVersion: ARTIFACT_REPORT_SCHEMA_VERSION,
+    artifactFingerprint: {
+      algorithm: "sha256",
+      value: await fingerprintArtifactDirectory(input.entries),
+      scope: "canonical-directory-v1"
+    },
+    specVersion: input.manifest?.spec ?? null,
+    entry: input.manifest?.entry ?? null,
+    compatibility: {
+      ...input.selection,
+      requestedProfile: { ...input.selection.requestedProfile },
+      profileSchemaVersion: input.profile.schemaVersion,
+      profileDefinitionStatus: input.profile.definitionStatus,
+      suggestedProfile: detectSuggestedProfile(input.entries)
+    },
+    admission: {
+      policyVersion: PLATFORM_ADMISSION_POLICY.version,
+      result: input.validation === "fail" ? "fail" : "pass"
+    },
+    statistics: {
+      fileCount: input.entries.length,
+      extractedBytes,
+      compressedBytes: null,
+      aggregateCompressionRatio: null,
+      largestFile: largest ? { path: largest.relPath, sizeBytes: largest.size } : null
+    },
+    observations: {
+      wasm: lowerPaths.some(
+        (item) => /\.wasm(?:\.(?:br|gz|gzip))?$/.test(item)
+      ),
+      dedicatedWorker: codes.has("BC3002"),
+      serviceWorker: codes.has("BC3003"),
+      remoteExecutableCode: codes.has("BC3001") || codes.has("BC5003"),
+      compressedAssets: lowerPaths.some(
+        (item) => /\.(?:br|gz|gzip|unityweb)$/.test(item)
+      )
+    },
+    assetMetadataRequirements: assetMetadataRequirements(input.entries),
+    diagnostics: reportDiagnostics(input.diagnostics),
+    certification: certification(
+      input.validation,
+      input.selection,
+      input.profile
+    ),
+    result: input.validation,
+    validatorVersion: VALIDATOR_VERSION,
+    createdAt: input.createdAt
+  };
+}
+
 // ../../packages/validator/src/validate.ts
 async function validateProject(dir, options = {}) {
+  const resolvedCompatibility = resolveCompatibilityProfileSelection(
+    options.profile
+  );
+  const compatibility = {
+    ...resolvedCompatibility,
+    selectionMode: options.profileSelectionMode ?? resolvedCompatibility.selectionMode
+  };
+  const selectedProfile = getCompatibilityProfile(
+    compatibility.requestedProfile
+  );
   const diagnostics = [];
   const manifestPath = import_node_path3.default.join(dir, MANIFEST_FILE_NAME);
   let rawManifest;
@@ -3892,6 +4365,7 @@ async function validateProject(dir, options = {}) {
     );
   }
   diagnostics.push(...validateArtifact(entries, options.limits));
+  diagnostics.push(...validateCompatibilityProfile(entries, selectedProfile));
   if (rawManifest !== void 0 && manifest !== void 0) {
     diagnostics.push(...await validateEntry(dir, manifest.entry));
     diagnostics.push(
@@ -3909,451 +4383,34 @@ async function validateProject(dir, options = {}) {
   const warnings = sorted.filter((d) => d.severity === "warning").length;
   const infos = sorted.filter((d) => d.severity === "info").length;
   const validation = errors > 0 ? "fail" : warnings > 0 ? "pass_with_warnings" : "pass";
+  const reportCreatedAt = options.reportCreatedAt instanceof Date ? options.reportCreatedAt.toISOString() : options.reportCreatedAt ? new Date(options.reportCreatedAt).toISOString() : (/* @__PURE__ */ new Date()).toISOString();
+  const artifactReport = await createArtifactReport({
+    entries,
+    diagnostics: sorted,
+    validation,
+    manifest,
+    selection: compatibility,
+    profile: selectedProfile,
+    createdAt: reportCreatedAt
+  });
   return {
     validation,
     diagnostics: sorted,
     manifest,
+    compatibility: {
+      ...compatibility,
+      profileDefinitionStatus: selectedProfile.definitionStatus,
+      admissionPolicyVersion: PLATFORM_ADMISSION_POLICY.version
+    },
+    artifactReport,
     errors,
     warnings,
     infos
   };
 }
 
-// ../../packages/validator/src/index.ts
-var VALIDATOR_VERSION = "0.1.0";
-
-// src/version.ts
-var CLI_VERSION = "1.1.1";
-
-// src/commands/init.ts
+// ../../packages/validator/src/artifact-archive.ts
 var import_promises5 = require("node:fs/promises");
-var import_node_path4 = __toESM(require("node:path"), 1);
-var import_promises6 = require("node:readline/promises");
-
-// src/output/result.ts
-function printJson(envelope) {
-  process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
-}
-
-// src/commands/init-contract.ts
-function commaSeparated(value) {
-  return value.split(",").map((part) => part.trim()).filter(Boolean);
-}
-function parseInputDevices(value) {
-  if (value.trim().toLowerCase() === "none") return [];
-  const values = commaSeparated(value);
-  const invalid = values.filter(
-    (candidate) => !INPUT_DEVICES.includes(candidate)
-  );
-  if (values.length === 0 || invalid.length > 0) {
-    throw new Error(
-      `input must be a comma-separated subset of ${INPUT_DEVICES.join(", ")}, or none`
-    );
-  }
-  return values;
-}
-function parseOrientation(value) {
-  const normalized = value.trim().toLowerCase();
-  if (!ORIENTATIONS.includes(normalized)) {
-    throw new Error(`orientation must be one of ${ORIENTATIONS.join(", ")}`);
-  }
-  return normalized;
-}
-function parseFullscreen(value) {
-  const normalized = value.trim().toLowerCase();
-  if (["yes", "true", "required"].includes(normalized)) return true;
-  if (["no", "false", "not-required"].includes(normalized)) return false;
-  throw new Error("fullscreen must be yes or no");
-}
-function parseNetworkOrigins(value) {
-  if (value.trim().toLowerCase() === "none") return [];
-  const origins = commaSeparated(value);
-  if (origins.length === 0) {
-    throw new Error("network must be comma-separated HTTPS origins, or none");
-  }
-  for (const origin of origins) {
-    let url;
-    try {
-      url = new URL(origin);
-    } catch {
-      throw new Error(`network origin is not a valid URL: ${origin}`);
-    }
-    if (url.protocol !== "https:" || url.origin !== origin || url.username || url.password) {
-      throw new Error(
-        `network origin must be a canonical HTTPS origin: ${origin}`
-      );
-    }
-  }
-  return origins;
-}
-function buildRuntimeContractManifest(entry, answers) {
-  const fullscreen = parseFullscreen(answers.fullscreen);
-  const network = parseNetworkOrigins(answers.network);
-  const permissions = {};
-  if (fullscreen) permissions.fullscreen = true;
-  if (network.length > 0) permissions.network = network;
-  return normalizeManifest({
-    spec: 1,
-    entry,
-    display: { orientation: parseOrientation(answers.orientation) },
-    input: parseInputDevices(answers.input),
-    permissions
-  });
-}
-function starterManifest(entry) {
-  return buildRuntimeContractManifest(entry, {
-    input: "none",
-    orientation: "any",
-    fullscreen: "no",
-    network: "none"
-  });
-}
-
-// src/commands/init.ts
-var STARTER_INDEX_HTML = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>My Buildcade Game</title>
-  </head>
-  <body>
-    <canvas id="game" width="640" height="360"></canvas>
-    <script src="game.js"></script>
-  </body>
-</html>
-`;
-var STARTER_GAME_JS = `// Buildcade starter game (Spec 1)
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-let frame = 0;
-function loop() {
-  ctx.fillStyle = "#101820";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#f2aa4c";
-  ctx.fillRect(frame % (canvas.width - 40), 160, 40, 40);
-  frame += 2;
-  requestAnimationFrame(loop);
-}
-loop();
-`;
-var ZERO_CONFIG_CANDIDATES = [
-  "index.html",
-  "dist/index.html",
-  "build/index.html"
-];
-async function isFile(target) {
-  try {
-    return (await (0, import_promises5.stat)(target)).isFile();
-  } catch {
-    return false;
-  }
-}
-var CONTRACT_FIELDS = [
-  "input",
-  "orientation",
-  "fullscreen",
-  "network"
-];
-async function runtimeContractAnswers(opts) {
-  const answers = {
-    input: opts.input,
-    orientation: opts.orientation,
-    fullscreen: opts.fullscreen,
-    network: opts.network
-  };
-  const missing = CONTRACT_FIELDS.filter((field) => !answers[field]?.trim());
-  const interactive = !opts.json && process.stdin.isTTY && process.stdout.isTTY;
-  if (missing.length > 0 && !interactive) {
-    throw new Error(
-      `Existing projects require explicit Runtime Contract declarations: ${missing.join(
-        ", "
-      )}. Use --input, --orientation, --fullscreen, and --network.`
-    );
-  }
-  if (missing.length > 0) {
-    const prompt = (0, import_promises6.createInterface)({
-      input: process.stdin,
-      output: process.stdout
-    });
-    try {
-      if (!answers.input?.trim()) {
-        answers.input = await prompt.question(
-          "Input devices (keyboard,mouse,touch,gamepad; comma-separated, or none): "
-        );
-      }
-      if (!answers.orientation?.trim()) {
-        answers.orientation = await prompt.question(
-          "Display orientation (any, portrait, landscape): "
-        );
-      }
-      if (!answers.fullscreen?.trim()) {
-        answers.fullscreen = await prompt.question(
-          "Fullscreen required (yes or no): "
-        );
-      }
-      if (!answers.network?.trim()) {
-        answers.network = await prompt.question(
-          "Network origins (comma-separated HTTPS origins, or none): "
-        );
-      }
-    } finally {
-      prompt.close();
-    }
-  }
-  return answers;
-}
-function registerInitCommand(program3) {
-  program3.command("init [dir]").description("Create buildcade.json for a local project").option("--json", "machine-readable output").option(
-    "--input <devices>",
-    "comma-separated keyboard,mouse,touch,gamepad; or none"
-  ).option(
-    "--orientation <orientation>",
-    "display orientation: any, portrait, or landscape"
-  ).option(
-    "--fullscreen <required>",
-    "whether fullscreen is required: yes or no"
-  ).option(
-    "--network <origins>",
-    "comma-separated canonical HTTPS origins; or none"
-  ).action(async (dirArg, opts) => {
-    const root = import_node_path4.default.resolve(process.cwd(), dirArg ?? ".");
-    const manifestPath = import_node_path4.default.join(root, MANIFEST_FILE_NAME);
-    if (await isFile(manifestPath)) {
-      const text = await (0, import_promises5.readFile)(manifestPath, "utf8");
-      const parsed = parseManifest(text);
-      if (opts.json) {
-        printJson({
-          schemaVersion: 1,
-          command: "init",
-          ok: parsed.ok,
-          result: {
-            manifest: MANIFEST_FILE_NAME,
-            created: false,
-            valid: parsed.ok
-          },
-          diagnostics: parsed.ok ? void 0 : [
-            {
-              code: "BC1002",
-              severity: "error",
-              message: parsed.error,
-              file: MANIFEST_FILE_NAME
-            }
-          ]
-        });
-        process.exitCode = parsed.ok ? 0 : 1;
-      } else {
-        console.log("buildcade.json already exists.");
-        if (!parsed.ok) {
-          console.error(`error: ${parsed.error}`);
-          process.exitCode = 1;
-        }
-      }
-      return;
-    }
-    const candidates = [];
-    for (const candidate of ZERO_CONFIG_CANDIDATES) {
-      if (await isFile(import_node_path4.default.join(root, candidate))) {
-        candidates.push(candidate);
-      }
-    }
-    if (candidates.length > 1) {
-      const message = `Multiple build outputs detected: ${candidates.join(", ")}. Choose one artifact root explicitly.`;
-      if (opts.json) {
-        printJson({
-          schemaVersion: 1,
-          command: "init",
-          ok: false,
-          result: {},
-          diagnostics: [
-            {
-              code: "BC9002",
-              severity: "error",
-              message,
-              actual: candidates.join(", ")
-            }
-          ]
-        });
-      } else {
-        console.error(message);
-        console.error(
-          "Hint: run buildcade init inside the intended output directory."
-        );
-      }
-      process.exitCode = 1;
-      return;
-    }
-    const entry = candidates.length === 1 ? candidates[0] : "index.html";
-    let createdStarter = false;
-    if (candidates.length === 0) {
-      createdStarter = true;
-      await (0, import_promises5.mkdir)(root, { recursive: true });
-      await (0, import_promises5.writeFile)(
-        import_node_path4.default.join(root, "index.html"),
-        STARTER_INDEX_HTML,
-        "utf8"
-      );
-      await (0, import_promises5.writeFile)(import_node_path4.default.join(root, "game.js"), STARTER_GAME_JS, "utf8");
-    }
-    let manifest;
-    try {
-      manifest = createdStarter ? starterManifest(entry) : buildRuntimeContractManifest(
-        entry,
-        await runtimeContractAnswers(opts)
-      );
-    } catch (error) {
-      const message = error.message;
-      if (opts.json) {
-        printJson({
-          schemaVersion: 1,
-          command: "init",
-          ok: false,
-          result: {},
-          diagnostics: [{ code: "BC9003", severity: "error", message }]
-        });
-      } else {
-        console.error(`error: ${message}`);
-      }
-      process.exitCode = 1;
-      return;
-    }
-    await (0, import_promises5.writeFile)(
-      manifestPath,
-      JSON.stringify(manifest, null, 2) + "\n",
-      "utf8"
-    );
-    if (opts.json) {
-      printJson({
-        schemaVersion: 1,
-        command: "init",
-        ok: true,
-        result: {
-          manifest: MANIFEST_FILE_NAME,
-          spec: GAME_SPEC_VERSION,
-          entry,
-          input: manifest.input,
-          display: manifest.display,
-          permissions: manifest.permissions,
-          created: true
-        }
-      });
-    } else {
-      console.log("Created buildcade.json");
-      console.log(`Spec: ${GAME_SPEC_VERSION}`);
-      console.log(`Entry: ${entry}`);
-      console.log(`Input: ${manifest.input?.join(", ") || "none"}`);
-      console.log(`Orientation: ${manifest.display?.orientation ?? "any"}`);
-      console.log(
-        `Fullscreen: ${manifest.permissions?.fullscreen ? "required" : "not required"}`
-      );
-      console.log(
-        `Network: ${manifest.permissions?.network?.join(", ") || "none"}`
-      );
-      if (createdStarter) {
-        console.log("Starter files: index.html, game.js");
-      }
-      console.log("Next:");
-      console.log("  buildcade validate");
-    }
-  });
-}
-
-// src/commands/validate.ts
-var import_node_path5 = __toESM(require("node:path"), 1);
-
-// src/output/render.ts
-function renderDiagnostics(diagnostics, stream) {
-  for (const diagnostic of diagnostics) {
-    stream.write(
-      `${diagnostic.severity.toUpperCase()} ${diagnostic.code}  ${diagnostic.file ?? ""}
-`
-    );
-    stream.write(`  ${diagnostic.message}
-`);
-    if (diagnostic.field !== void 0) {
-      stream.write(`  field: ${diagnostic.field}
-`);
-    }
-    if (diagnostic.actual !== void 0) {
-      stream.write(`  actual: ${diagnostic.actual}
-`);
-    }
-    if (diagnostic.expected !== void 0) {
-      stream.write(`  expected: ${diagnostic.expected}
-`);
-    }
-    if (diagnostic.suggestion !== void 0) {
-      stream.write(`  fix: ${diagnostic.suggestion}
-`);
-    }
-    stream.write("\n");
-  }
-}
-
-// src/commands/validate.ts
-function registerValidateCommand(program3) {
-  program3.command("validate [dir]").description("Validate a game artifact root").option("--json", "machine-readable output").option("--quiet", "suppress success output").action(
-    async (dirArg, opts) => {
-      const root = import_node_path5.default.resolve(process.cwd(), dirArg ?? ".");
-      let result;
-      try {
-        result = await validateProject(root);
-      } catch (err2) {
-        console.error(`error: ${err2.message}`);
-        process.exitCode = 9;
-        return;
-      }
-      const ok = result.validation !== "fail";
-      if (opts.json) {
-        printJson({
-          schemaVersion: 1,
-          command: "validate",
-          ok,
-          result: {
-            validation: result.validation,
-            spec: result.manifest?.spec ?? GAME_SPEC_VERSION,
-            artifactRoot: root,
-            errors: result.errors,
-            warnings: result.warnings,
-            infos: result.infos
-          },
-          diagnostics: result.diagnostics
-        });
-        process.exitCode = ok ? 0 : 1;
-        return;
-      }
-      if (!ok) {
-        process.stderr.write(
-          `Buildcade validation failed.
-
-${result.errors} errors, ${result.warnings} warnings
-
-`
-        );
-        renderDiagnostics(result.diagnostics, process.stderr);
-        process.stderr.write("Validation failed.\n");
-        process.exitCode = 1;
-        return;
-      }
-      if (result.warnings > 0) {
-        process.stderr.write(
-          `Buildcade validation passed with warnings (${result.warnings} warnings).
-`
-        );
-        renderDiagnostics(result.diagnostics, process.stderr);
-        if (!opts.quiet) {
-          console.log("Buildcade validation passed with warnings.");
-        }
-      } else if (!opts.quiet) {
-        console.log("Buildcade validation passed.");
-      }
-    }
-  );
-}
-
-// src/commands/pack.ts
-var import_node_crypto = require("node:crypto");
-var import_promises7 = require("node:fs/promises");
-var import_node_path6 = __toESM(require("node:path"), 1);
 
 // ../../node_modules/.pnpm/fflate@0.8.3/node_modules/fflate/esm/index.mjs
 var import_module = require("module");
@@ -5071,50 +5128,681 @@ function zipSync(data, opts) {
   return out;
 }
 
-// src/commands/pack.ts
+// ../../packages/validator/src/artifact-archive.ts
 var ZIP_EPOCH = /* @__PURE__ */ new Date("1980-01-01T00:00:00Z");
 var EXCLUDED_TOP_LEVEL = /* @__PURE__ */ new Set([".git", ".buildcade", "node_modules"]);
-function isExcluded(relPath) {
-  const first = relPath.split("/")[0] ?? relPath;
-  if (EXCLUDED_TOP_LEVEL.has(first)) {
-    return true;
-  }
-  const lower = relPath.toLowerCase();
+function isArtifactEntryExcluded(relativePath) {
+  const first = relativePath.split("/")[0] ?? relativePath;
+  if (EXCLUDED_TOP_LEVEL.has(first)) return true;
+  const lower = relativePath.toLowerCase();
   return lower.startsWith(".env") || lower.startsWith(".env.");
 }
+function compareArtifactPath(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+async function createDeterministicArtifactArchive(root) {
+  const entries = (await collectArtifactEntries(root)).filter(
+    (entry) => !entry.isSymbolicLink && !isArtifactEntryExcluded(entry.relPath)
+  );
+  const files = {};
+  for (const entry of entries.sort(
+    (left, right) => compareArtifactPath(left.relPath, right.relPath)
+  )) {
+    files[entry.relPath] = new Uint8Array(await (0, import_promises5.readFile)(entry.absPath));
+  }
+  return {
+    bytes: zipSync(files, { level: 9, mtime: ZIP_EPOCH }),
+    entries: entries.length
+  };
+}
+
+// ../../packages/validator/src/diagnostic-localization.ts
+var ZH_CN = {
+  BC1001: "\u6784\u5EFA\u4EA7\u7269\u6839\u76EE\u5F55\u4E2D\u7F3A\u5C11 buildcade.json\u3002",
+  BC1002: "Manifest \u4E0D\u662F\u6709\u6548\u7684 JSON\u3002",
+  BC1003: "Spec \u7248\u672C\u7F3A\u5931\u6216\u4E0D\u53D7\u652F\u6301\u3002",
+  BC1004: "\u5165\u53E3\u914D\u7F6E\u65E0\u6548\u3002",
+  BC1005: "Manifest \u5305\u542B\u672A\u77E5\u5B57\u6BB5\u3002",
+  BC1006: "\u663E\u793A\u914D\u7F6E\u65E0\u6548\u3002",
+  BC1007: "\u8F93\u5165\u914D\u7F6E\u65E0\u6548\u3002",
+  BC1008: "\u6743\u9650\u914D\u7F6E\u65E0\u6548\u3002",
+  BC1010: "\u672A\u6EE1\u8DB3\u517C\u5BB9\u914D\u7F6E\u8981\u6C42\u3002",
+  BC2001: "\u627E\u4E0D\u5230\u5165\u53E3\u6587\u4EF6\u3002",
+  BC2002: "\u6784\u5EFA\u4EA7\u7269\u8DEF\u5F84\u4E0D\u5B89\u5168\u3002",
+  BC2003: "\u4E0D\u5141\u8BB8\u6587\u4EF6\u7CFB\u7EDF\u94FE\u63A5\u3002",
+  BC2004: "\u6784\u5EFA\u5305\u8D85\u8FC7\u8D44\u6E90\u4E0A\u9650\u3002",
+  BC2005: "\u6587\u4EF6\u8D85\u8FC7\u8D44\u6E90\u4E0A\u9650\u3002",
+  BC2006: "\u6587\u4EF6\u6570\u91CF\u8D85\u8FC7\u4E0A\u9650\u3002",
+  BC2007: "\u4E0D\u652F\u6301\u670D\u52A1\u7AEF\u6216\u539F\u751F\u53EF\u6267\u884C\u6587\u4EF6\u3002",
+  BC2008: "\u5B58\u5728\u4EC5\u5927\u5C0F\u5199\u4E0D\u540C\u7684\u51B2\u7A81\u8DEF\u5F84\u3002",
+  BC3001: "\u4E0D\u5141\u8BB8\u8FDC\u7A0B\u53EF\u6267\u884C\u4EE3\u7801\u3002",
+  BC3002: "\u6682\u4E0D\u652F\u6301 Worker\u3002",
+  BC3003: "\u6682\u4E0D\u652F\u6301 Service Worker\u3002",
+  BC3004: "\u6682\u4E0D\u652F\u6301\u5D4C\u5165\u5F0F frame\u3002",
+  BC3005: "\u4F7F\u7528\u4E86\u4E0D\u53D7\u652F\u6301\u7684\u5BFC\u822A\u80FD\u529B\u3002",
+  BC5001: "\u7F51\u7EDC\u6765\u6E90\u65E0\u6548\u3002",
+  BC5002: "\u4E0D\u5141\u8BB8\u7F51\u7EDC\u901A\u914D\u7B26\u3002",
+  BC5003: "\u5B58\u5728\u672A\u58F0\u660E\u7684\u5916\u90E8\u7F51\u7EDC\u4F9D\u8D56\u3002",
+  BC5004: "\u672A\u58F0\u660E\u6240\u9700\u80FD\u529B\u3002",
+  BC6001: "\u68C0\u6D4B\u5230\u53EF\u80FD\u7684\u5BC6\u94A5\u6750\u6599\u3002",
+  BC9001: "\u9A8C\u8BC1\u5DE5\u5177\u9047\u5230\u5185\u90E8\u9519\u8BEF\u3002",
+  BC9002: "\u547D\u4EE4\u884C\u53C2\u6570\u65E0\u6548\u3002"
+};
+var ZH_TW = {
+  BC1001: "\u5EFA\u7F6E\u7522\u7269\u6839\u76EE\u9304\u4E2D\u7F3A\u5C11 buildcade.json\u3002",
+  BC1002: "Manifest \u4E0D\u662F\u6709\u6548\u7684 JSON\u3002",
+  BC1003: "Spec \u7248\u672C\u7F3A\u5931\u6216\u4E0D\u53D7\u652F\u63F4\u3002",
+  BC1004: "\u9032\u5165\u9EDE\u8A2D\u5B9A\u7121\u6548\u3002",
+  BC1005: "Manifest \u5305\u542B\u672A\u77E5\u6B04\u4F4D\u3002",
+  BC1006: "\u986F\u793A\u8A2D\u5B9A\u7121\u6548\u3002",
+  BC1007: "\u8F38\u5165\u8A2D\u5B9A\u7121\u6548\u3002",
+  BC1008: "\u6B0A\u9650\u8A2D\u5B9A\u7121\u6548\u3002",
+  BC1010: "\u672A\u6EFF\u8DB3\u76F8\u5BB9\u8A2D\u5B9A\u8981\u6C42\u3002",
+  BC2001: "\u627E\u4E0D\u5230\u9032\u5165\u9EDE\u6A94\u6848\u3002",
+  BC2002: "\u5EFA\u7F6E\u7522\u7269\u8DEF\u5F91\u4E0D\u5B89\u5168\u3002",
+  BC2003: "\u4E0D\u5141\u8A31\u6A94\u6848\u7CFB\u7D71\u9023\u7D50\u3002",
+  BC2004: "\u5EFA\u7F6E\u5957\u4EF6\u8D85\u904E\u8CC7\u6E90\u4E0A\u9650\u3002",
+  BC2005: "\u6A94\u6848\u8D85\u904E\u8CC7\u6E90\u4E0A\u9650\u3002",
+  BC2006: "\u6A94\u6848\u6578\u91CF\u8D85\u904E\u4E0A\u9650\u3002",
+  BC2007: "\u4E0D\u652F\u63F4\u4F3A\u670D\u5668\u7AEF\u6216\u539F\u751F\u53EF\u57F7\u884C\u6A94\u3002",
+  BC2008: "\u5B58\u5728\u50C5\u5927\u5C0F\u5BEB\u4E0D\u540C\u7684\u885D\u7A81\u8DEF\u5F91\u3002",
+  BC3001: "\u4E0D\u5141\u8A31\u9060\u7AEF\u53EF\u57F7\u884C\u7A0B\u5F0F\u78BC\u3002",
+  BC3002: "\u66AB\u4E0D\u652F\u63F4 Worker\u3002",
+  BC3003: "\u66AB\u4E0D\u652F\u63F4 Service Worker\u3002",
+  BC3004: "\u66AB\u4E0D\u652F\u63F4\u5167\u5D4C frame\u3002",
+  BC3005: "\u4F7F\u7528\u4E86\u4E0D\u53D7\u652F\u63F4\u7684\u5C0E\u89BD\u80FD\u529B\u3002",
+  BC5001: "\u7DB2\u8DEF\u4F86\u6E90\u7121\u6548\u3002",
+  BC5002: "\u4E0D\u5141\u8A31\u7DB2\u8DEF\u842C\u7528\u5B57\u5143\u3002",
+  BC5003: "\u5B58\u5728\u672A\u5BA3\u544A\u7684\u5916\u90E8\u7DB2\u8DEF\u76F8\u4F9D\u9805\u76EE\u3002",
+  BC5004: "\u672A\u5BA3\u544A\u6240\u9700\u80FD\u529B\u3002",
+  BC6001: "\u5075\u6E2C\u5230\u53EF\u80FD\u7684\u91D1\u9470\u8CC7\u6599\u3002",
+  BC9001: "\u9A57\u8B49\u5DE5\u5177\u9047\u5230\u5167\u90E8\u932F\u8AA4\u3002",
+  BC9002: "\u547D\u4EE4\u5217\u53C3\u6578\u7121\u6548\u3002"
+};
+var FIX = {
+  en: "Review the reported location and expected value, then validate again.",
+  "zh-CN": "\u68C0\u67E5\u62A5\u544A\u7684\u4F4D\u7F6E\u548C\u9884\u671F\u503C\uFF0C\u4FEE\u6B63\u540E\u91CD\u65B0\u9A8C\u8BC1\u3002",
+  "zh-TW": "\u6AA2\u67E5\u5831\u544A\u7684\u4F4D\u7F6E\u8207\u9810\u671F\u503C\uFF0C\u4FEE\u6B63\u5F8C\u91CD\u65B0\u9A57\u8B49\u3002"
+};
+function localizeDiagnostic(diagnostic, locale) {
+  const code = diagnostic.code;
+  const catalog = locale === "zh-CN" ? ZH_CN : locale === "zh-TW" ? ZH_TW : null;
+  const message = code in BC_ERROR_CODES ? catalog?.[code] ?? BC_ERROR_CODES[code] : locale === "zh-CN" ? "\u9A8C\u8BC1\u53D1\u73B0\u4E86\u4E00\u4E2A\u9700\u8981\u5904\u7406\u7684\u95EE\u9898\u3002" : locale === "zh-TW" ? "\u9A57\u8B49\u767C\u73FE\u4E86\u4E00\u500B\u9700\u8981\u8655\u7406\u7684\u554F\u984C\u3002" : "Validation found an issue that needs attention.";
+  return {
+    message,
+    ...diagnostic.suggestion ? { suggestion: FIX[locale] } : {}
+  };
+}
+function diagnosticHumanLabels(locale) {
+  if (locale === "zh-CN") {
+    return {
+      severity: { error: "\u9519\u8BEF", warning: "\u8B66\u544A", info: "\u4FE1\u606F" },
+      field: "\u5B57\u6BB5",
+      actual: "\u5B9E\u9645\u503C",
+      expected: "\u9884\u671F\u503C",
+      fix: "\u5EFA\u8BAE"
+    };
+  }
+  if (locale === "zh-TW") {
+    return {
+      severity: { error: "\u932F\u8AA4", warning: "\u8B66\u544A", info: "\u8CC7\u8A0A" },
+      field: "\u6B04\u4F4D",
+      actual: "\u5BE6\u969B\u503C",
+      expected: "\u9810\u671F\u503C",
+      fix: "\u5EFA\u8B70"
+    };
+  }
+  return {
+    severity: { error: "ERROR", warning: "WARNING", info: "INFO" },
+    field: "field",
+    actual: "actual",
+    expected: "expected",
+    fix: "fix"
+  };
+}
+
+// src/version.ts
+var CLI_VERSION = "1.1.2";
+
+// src/commands/init.ts
+var import_promises6 = require("node:fs/promises");
+var import_node_path4 = __toESM(require("node:path"), 1);
+var import_promises7 = require("node:readline/promises");
+
+// src/output/result.ts
+function printJson(envelope) {
+  process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
+}
+
+// src/commands/init-contract.ts
+function commaSeparated(value) {
+  return value.split(",").map((part) => part.trim()).filter(Boolean);
+}
+function parseInputDevices(value) {
+  if (value.trim().toLowerCase() === "none") return [];
+  const values = commaSeparated(value);
+  const invalid = values.filter(
+    (candidate) => !INPUT_DEVICES.includes(candidate)
+  );
+  if (values.length === 0 || invalid.length > 0) {
+    throw new Error(
+      `input must be a comma-separated subset of ${INPUT_DEVICES.join(", ")}, or none`
+    );
+  }
+  return values;
+}
+function parseOrientation(value) {
+  const normalized = value.trim().toLowerCase();
+  if (!ORIENTATIONS.includes(normalized)) {
+    throw new Error(`orientation must be one of ${ORIENTATIONS.join(", ")}`);
+  }
+  return normalized;
+}
+function parseAspectRatio(value) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || ["responsive", "auto", "none"].includes(normalized)) {
+    return void 0;
+  }
+  if (!ASPECT_RATIO_PATTERN.test(normalized)) {
+    throw new Error(
+      "aspect-ratio must be positiveInteger:positiveInteger, or responsive"
+    );
+  }
+  return normalized;
+}
+function parseFullscreen(value) {
+  const normalized = value.trim().toLowerCase();
+  if (["yes", "true", "required"].includes(normalized)) return true;
+  if (["no", "false", "not-required"].includes(normalized)) return false;
+  throw new Error("fullscreen must be yes or no");
+}
+function parseNetworkOrigins(value) {
+  if (value.trim().toLowerCase() === "none") return [];
+  const origins = commaSeparated(value);
+  if (origins.length === 0) {
+    throw new Error("network must be comma-separated HTTPS origins, or none");
+  }
+  for (const origin of origins) {
+    let url;
+    try {
+      url = new URL(origin);
+    } catch {
+      throw new Error(`network origin is not a valid URL: ${origin}`);
+    }
+    if (url.protocol !== "https:" || url.origin !== origin || url.username || url.password) {
+      throw new Error(
+        `network origin must be a canonical HTTPS origin: ${origin}`
+      );
+    }
+  }
+  return origins;
+}
+function buildRuntimeContractManifest(entry, answers) {
+  const fullscreen = parseFullscreen(answers.fullscreen);
+  const aspectRatio = parseAspectRatio(answers.aspectRatio);
+  const network = parseNetworkOrigins(answers.network);
+  const permissions = {};
+  if (fullscreen) permissions.fullscreen = true;
+  if (network.length > 0) permissions.network = network;
+  return normalizeManifest({
+    spec: 1,
+    entry,
+    display: {
+      orientation: parseOrientation(answers.orientation),
+      ...aspectRatio ? { aspectRatio } : {}
+    },
+    input: parseInputDevices(answers.input),
+    permissions
+  });
+}
+function starterManifest(entry) {
+  return buildRuntimeContractManifest(entry, {
+    input: "none",
+    orientation: "any",
+    fullscreen: "no",
+    network: "none"
+  });
+}
+
+// src/commands/init.ts
+var STARTER_INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>My Buildcade Game</title>
+  </head>
+  <body>
+    <canvas id="game" width="640" height="360"></canvas>
+    <script src="game.js"></script>
+  </body>
+</html>
+`;
+var STARTER_GAME_JS = `// Buildcade starter game (Spec 1)
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let frame = 0;
+function loop() {
+  ctx.fillStyle = "#101820";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#f2aa4c";
+  ctx.fillRect(frame % (canvas.width - 40), 160, 40, 40);
+  frame += 2;
+  requestAnimationFrame(loop);
+}
+loop();
+`;
+var ZERO_CONFIG_CANDIDATES = [
+  "index.html",
+  "dist/index.html",
+  "build/index.html"
+];
+async function isFile(target) {
+  try {
+    return (await (0, import_promises6.stat)(target)).isFile();
+  } catch {
+    return false;
+  }
+}
+var CONTRACT_FIELDS = [
+  "input",
+  "orientation",
+  "fullscreen",
+  "network"
+];
+async function runtimeContractAnswers(opts) {
+  const answers = {
+    input: opts.input,
+    orientation: opts.orientation,
+    aspectRatio: opts.aspectRatio,
+    fullscreen: opts.fullscreen,
+    network: opts.network
+  };
+  const missing = CONTRACT_FIELDS.filter((field) => !answers[field]?.trim());
+  const interactive = !opts.json && process.stdin.isTTY && process.stdout.isTTY;
+  if (missing.length > 0 && !interactive) {
+    throw new Error(
+      `Existing projects require explicit Runtime Contract declarations: ${missing.join(
+        ", "
+      )}. Use --input, --orientation, --fullscreen, and --network.`
+    );
+  }
+  if (missing.length > 0) {
+    const prompt = (0, import_promises7.createInterface)({
+      input: process.stdin,
+      output: process.stdout
+    });
+    try {
+      if (!answers.input?.trim()) {
+        answers.input = await prompt.question(
+          "Input devices (keyboard,mouse,touch,gamepad; comma-separated, or none): "
+        );
+      }
+      if (!answers.orientation?.trim()) {
+        answers.orientation = await prompt.question(
+          "Display orientation (any, portrait, landscape): "
+        );
+      }
+      if (!answers.fullscreen?.trim()) {
+        answers.fullscreen = await prompt.question(
+          "Fullscreen required (yes or no): "
+        );
+      }
+      if (!answers.network?.trim()) {
+        answers.network = await prompt.question(
+          "Network origins (comma-separated HTTPS origins, or none): "
+        );
+      }
+    } finally {
+      prompt.close();
+    }
+  }
+  return answers;
+}
+function registerInitCommand(program3) {
+  program3.command("init [dir]").description("Create buildcade.json for a local project").option("--json", "machine-readable output").option(
+    "--input <devices>",
+    "comma-separated keyboard,mouse,touch,gamepad; or none"
+  ).option(
+    "--orientation <orientation>",
+    "display orientation: any, portrait, or landscape"
+  ).option(
+    "--aspect-ratio <ratio>",
+    "fixed canvas ratio such as 16:9; omit or use responsive to fill"
+  ).option(
+    "--fullscreen <required>",
+    "whether fullscreen is required: yes or no"
+  ).option(
+    "--network <origins>",
+    "comma-separated canonical HTTPS origins; or none"
+  ).action(async (dirArg, opts) => {
+    const root = import_node_path4.default.resolve(process.cwd(), dirArg ?? ".");
+    const manifestPath = import_node_path4.default.join(root, MANIFEST_FILE_NAME);
+    if (await isFile(manifestPath)) {
+      const text = await (0, import_promises6.readFile)(manifestPath, "utf8");
+      const parsed = parseManifest(text);
+      if (opts.json) {
+        printJson({
+          schemaVersion: 1,
+          command: "init",
+          ok: parsed.ok,
+          result: {
+            manifest: MANIFEST_FILE_NAME,
+            created: false,
+            valid: parsed.ok
+          },
+          diagnostics: parsed.ok ? void 0 : [
+            {
+              code: "BC1002",
+              severity: "error",
+              message: parsed.error,
+              file: MANIFEST_FILE_NAME
+            }
+          ]
+        });
+        process.exitCode = parsed.ok ? 0 : 1;
+      } else {
+        console.log("buildcade.json already exists.");
+        if (!parsed.ok) {
+          console.error(`error: ${parsed.error}`);
+          process.exitCode = 1;
+        }
+      }
+      return;
+    }
+    const candidates = [];
+    for (const candidate of ZERO_CONFIG_CANDIDATES) {
+      if (await isFile(import_node_path4.default.join(root, candidate))) {
+        candidates.push(candidate);
+      }
+    }
+    if (candidates.length > 1) {
+      const message = `Multiple build outputs detected: ${candidates.join(", ")}. Choose one artifact root explicitly.`;
+      if (opts.json) {
+        printJson({
+          schemaVersion: 1,
+          command: "init",
+          ok: false,
+          result: {},
+          diagnostics: [
+            {
+              code: "BC9002",
+              severity: "error",
+              message,
+              actual: candidates.join(", ")
+            }
+          ]
+        });
+      } else {
+        console.error(message);
+        console.error(
+          "Hint: run buildcade init inside the intended output directory."
+        );
+      }
+      process.exitCode = 1;
+      return;
+    }
+    const entry = candidates.length === 1 ? candidates[0] : "index.html";
+    let createdStarter = false;
+    if (candidates.length === 0) {
+      createdStarter = true;
+      await (0, import_promises6.mkdir)(root, { recursive: true });
+      await (0, import_promises6.writeFile)(
+        import_node_path4.default.join(root, "index.html"),
+        STARTER_INDEX_HTML,
+        "utf8"
+      );
+      await (0, import_promises6.writeFile)(import_node_path4.default.join(root, "game.js"), STARTER_GAME_JS, "utf8");
+    }
+    let manifest;
+    try {
+      manifest = createdStarter ? starterManifest(entry) : buildRuntimeContractManifest(
+        entry,
+        await runtimeContractAnswers(opts)
+      );
+    } catch (error) {
+      const message = error.message;
+      if (opts.json) {
+        printJson({
+          schemaVersion: 1,
+          command: "init",
+          ok: false,
+          result: {},
+          diagnostics: [{ code: "BC9003", severity: "error", message }]
+        });
+      } else {
+        console.error(`error: ${message}`);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    await (0, import_promises6.writeFile)(
+      manifestPath,
+      JSON.stringify(manifest, null, 2) + "\n",
+      "utf8"
+    );
+    if (opts.json) {
+      printJson({
+        schemaVersion: 1,
+        command: "init",
+        ok: true,
+        result: {
+          manifest: MANIFEST_FILE_NAME,
+          spec: GAME_SPEC_VERSION,
+          entry,
+          input: manifest.input,
+          display: manifest.display,
+          permissions: manifest.permissions,
+          created: true
+        }
+      });
+    } else {
+      console.log("Created buildcade.json");
+      console.log(`Spec: ${GAME_SPEC_VERSION}`);
+      console.log(`Entry: ${entry}`);
+      console.log(`Input: ${manifest.input?.join(", ") || "none"}`);
+      console.log(`Orientation: ${manifest.display?.orientation ?? "any"}`);
+      console.log(
+        `Aspect ratio: ${manifest.display?.aspectRatio ?? "responsive"}`
+      );
+      console.log(
+        `Fullscreen: ${manifest.permissions?.fullscreen ? "required" : "not required"}`
+      );
+      console.log(
+        `Network: ${manifest.permissions?.network?.join(", ") || "none"}`
+      );
+      if (createdStarter) {
+        console.log("Starter files: index.html, game.js");
+      }
+      console.log("Next:");
+      console.log("  buildcade validate");
+    }
+  });
+}
+
+// src/commands/validate.ts
+var import_node_path5 = __toESM(require("node:path"), 1);
+
+// src/output/locale.ts
+function normalize(value) {
+  const locale = value?.replace("_", "-").toLowerCase();
+  if (!locale) return null;
+  if (locale.startsWith("zh-tw") || locale.startsWith("zh-hk")) return "zh-TW";
+  if (locale.startsWith("zh")) return "zh-CN";
+  if (locale.startsWith("en")) return "en";
+  return null;
+}
+function cliLocale(argv = process.argv) {
+  const index = argv.findIndex((item) => item === "--locale");
+  const inline = argv.find((item) => item.startsWith("--locale="))?.slice(9);
+  return normalize(index >= 0 ? argv[index + 1] : inline) ?? normalize(process.env["LC_ALL"] ?? process.env["LANG"]) ?? normalize(Intl.DateTimeFormat().resolvedOptions().locale) ?? "en";
+}
+function human(en, zhCN, zhTW) {
+  const locale = cliLocale();
+  return locale === "zh-CN" ? zhCN : locale === "zh-TW" ? zhTW : en;
+}
+
+// src/output/render.ts
+function renderDiagnostics(diagnostics, stream) {
+  const locale = cliLocale();
+  const labels = diagnosticHumanLabels(locale);
+  for (const diagnostic of diagnostics) {
+    const localized = localizeDiagnostic(diagnostic, locale);
+    stream.write(
+      `${labels.severity[diagnostic.severity]} ${diagnostic.code}  ${diagnostic.file ?? ""}
+`
+    );
+    stream.write(`  ${localized.message}
+`);
+    if (diagnostic.field !== void 0) {
+      stream.write(`  ${labels.field}: ${diagnostic.field}
+`);
+    }
+    if (diagnostic.actual !== void 0) {
+      stream.write(`  ${labels.actual}: ${diagnostic.actual}
+`);
+    }
+    if (diagnostic.expected !== void 0) {
+      stream.write(`  ${labels.expected}: ${diagnostic.expected}
+`);
+    }
+    if (localized.suggestion !== void 0) {
+      stream.write(`  ${labels.fix}: ${localized.suggestion}
+`);
+    }
+    stream.write("\n");
+  }
+}
+
+// src/commands/profile.ts
+function resolveCliProfile(profileInput) {
+  if (profileInput === void 0) return void 0;
+  const separator = profileInput.lastIndexOf("@");
+  const profileId = separator > 0 ? profileInput.slice(0, separator) : profileInput;
+  const versionText = separator > 0 ? profileInput.slice(separator + 1) : void 0;
+  if (!isCompatibilityProfileId(profileId)) {
+    throw new CompatibilityProfileError(
+      `Unsupported compatibility profile '${profileId}'. Expected one of: ${COMPATIBILITY_PROFILE_IDS.join(", ")}.`
+    );
+  }
+  if (versionText !== void 0 && versionText !== String(COMPATIBILITY_PROFILE_VERSION)) {
+    throw new CompatibilityProfileError(
+      `Unsupported compatibility profile version '${versionText || "(empty)"}'. Expected ${COMPATIBILITY_PROFILE_VERSION}.`
+    );
+  }
+  return { id: profileId, version: COMPATIBILITY_PROFILE_VERSION };
+}
+
+// src/commands/validate.ts
+function registerValidateCommand(program3) {
+  program3.command("validate [dir]").description("Validate a game artifact root").option(
+    "--profile <id[@version]>",
+    "compatibility profile id and optional exact version"
+  ).option("--json", "machine-readable output").option("--quiet", "suppress success output").action(
+    async (dirArg, opts) => {
+      const root = import_node_path5.default.resolve(process.cwd(), dirArg ?? ".");
+      let result;
+      try {
+        result = await validateProject(root, {
+          profile: resolveCliProfile(opts.profile)
+        });
+      } catch (err2) {
+        console.error(`error: ${err2.message}`);
+        process.exitCode = opts.profile ? 2 : 9;
+        return;
+      }
+      const ok = result.validation !== "fail";
+      if (opts.json) {
+        printJson({
+          schemaVersion: 1,
+          command: "validate",
+          ok,
+          result: {
+            validation: result.validation,
+            spec: result.manifest?.spec ?? GAME_SPEC_VERSION,
+            artifactRoot: root,
+            errors: result.errors,
+            warnings: result.warnings,
+            infos: result.infos,
+            compatibility: result.compatibility,
+            artifactReport: result.artifactReport
+          },
+          diagnostics: result.artifactReport.diagnostics
+        });
+        process.exitCode = ok ? 0 : 1;
+        return;
+      }
+      if (!ok) {
+        process.stderr.write(
+          `Buildcade validation failed.
+
+${result.errors} errors, ${result.warnings} warnings
+
+`
+        );
+        renderDiagnostics(result.diagnostics, process.stderr);
+        process.stderr.write("Validation failed.\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (result.warnings > 0) {
+        process.stderr.write(
+          `Buildcade validation passed with warnings (${result.warnings} warnings).
+`
+        );
+        renderDiagnostics(result.diagnostics, process.stderr);
+        if (!opts.quiet) {
+          console.log("Buildcade validation passed with warnings.");
+        }
+      } else if (!opts.quiet) {
+        console.log("Buildcade validation passed.");
+      }
+      if (!opts.quiet && opts.profile) {
+        console.log(
+          human(
+            `Profile: ${result.compatibility.requestedProfile.id}@${result.compatibility.requestedProfile.version}`,
+            `\u517C\u5BB9\u914D\u7F6E\uFF1A${result.compatibility.requestedProfile.id}@${result.compatibility.requestedProfile.version}`,
+            `\u76F8\u5BB9\u8A2D\u5B9A\uFF1A${result.compatibility.requestedProfile.id}@${result.compatibility.requestedProfile.version}`
+          )
+        );
+      }
+    }
+  );
+}
+
+// src/commands/pack.ts
+var import_node_crypto2 = require("node:crypto");
+var import_promises8 = require("node:fs/promises");
+var import_node_path6 = __toESM(require("node:path"), 1);
 function slugify(name) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "game";
 }
-async function createArtifactZip(root) {
-  const entries = (await collectArtifactEntries(root)).filter(
-    (entry) => !entry.isSymbolicLink && !isExcluded(entry.relPath)
-  );
-  const files = {};
-  for (const entry of entries.sort(
-    (a, b) => a.relPath.localeCompare(b.relPath)
-  )) {
-    files[entry.relPath] = new Uint8Array(await (0, import_promises7.readFile)(entry.absPath));
-  }
-  const bytes = zipSync(files, {
-    level: 9,
-    mtime: ZIP_EPOCH
-  });
-  return { bytes, entries: entries.length };
-}
+var createArtifactZip = createDeterministicArtifactArchive;
 function registerPackCommand(program3) {
-  program3.command("pack [dir]").description("Pack a validated artifact into a deterministic ZIP").option("-o, --output <path>", "output zip path").option("--json", "machine-readable output").action(
+  program3.command("pack [dir]").description("Pack a validated artifact into a deterministic ZIP").option(
+    "--profile <id[@version]>",
+    "compatibility profile id and optional exact version"
+  ).option("-o, --output <path>", "output zip path").option("--json", "machine-readable output").action(
     async (dirArg, opts) => {
       const root = import_node_path6.default.resolve(process.cwd(), dirArg ?? ".");
-      const result = await validateProject(root);
+      let result;
+      try {
+        result = await validateProject(root, {
+          profile: resolveCliProfile(opts.profile)
+        });
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+        return;
+      }
       if (result.validation === "fail") {
         if (opts.json) {
           printJson({
             schemaVersion: 1,
             command: "pack",
             ok: false,
-            result: {},
-            diagnostics: result.diagnostics
+            result: { artifactReport: result.artifactReport },
+            diagnostics: result.artifactReport.diagnostics
           });
         } else {
           process.stderr.write(
@@ -5130,11 +5818,11 @@ function registerPackCommand(program3) {
       try {
         const zip = await createArtifactZip(root);
         const zipBytes = zip.bytes;
-        const hash = (0, import_node_crypto.createHash)("sha256").update(zipBytes).digest("hex");
+        const hash = (0, import_node_crypto2.createHash)("sha256").update(zipBytes).digest("hex");
         const defaultName = `${slugify(import_node_path6.default.basename(root))}.zip`;
         const outputPath = opts.output ? import_node_path6.default.resolve(process.cwd(), opts.output) : import_node_path6.default.join(root, ".buildcade", defaultName);
-        await (0, import_promises7.mkdir)(import_node_path6.default.dirname(outputPath), { recursive: true });
-        await (0, import_promises7.writeFile)(outputPath, zipBytes);
+        await (0, import_promises8.mkdir)(import_node_path6.default.dirname(outputPath), { recursive: true });
+        await (0, import_promises8.writeFile)(outputPath, zipBytes);
         if (opts.json) {
           printJson({
             schemaVersion: 1,
@@ -5145,7 +5833,9 @@ function registerPackCommand(program3) {
               artifactHash: `sha256:${hash}`,
               sizeBytes: zipBytes.byteLength,
               spec: result.manifest?.spec ?? GAME_SPEC_VERSION,
-              warnings: result.warnings
+              warnings: result.warnings,
+              compatibility: result.compatibility,
+              artifactReport: result.artifactReport
             }
           });
         } else {
@@ -5169,7 +5859,7 @@ var import_node_path8 = __toESM(require("node:path"), 1);
 
 // src/preview/server.ts
 var import_node_http = require("node:http");
-var import_promises8 = require("node:fs/promises");
+var import_promises9 = require("node:fs/promises");
 var import_node_path7 = __toESM(require("node:path"), 1);
 
 // ../../packages/runtime-policy/src/index.ts
@@ -5220,10 +5910,12 @@ function cspHeader(csp) {
 }
 
 // src/preview/shell.ts
-function buildShellHtml(policy, gameUrl) {
+function buildShellHtml(policy, gameUrl, display = { orientation: "any" }) {
   const sandbox = policy.sandboxTokens.join(" ");
   const frameOrigin = new URL(gameUrl).origin;
   const frameSrc = `frame-src ${frameOrigin};`;
+  const fullscreenEnabled = policy.capabilities.includes("fullscreen");
+  const fullscreenDisabled = fullscreenEnabled ? "" : " disabled";
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -5233,27 +5925,131 @@ function buildShellHtml(policy, gameUrl) {
     <style>
       html, body { margin: 0; height: 100%; background: #0b0f14; color: #e8e8e8; font-family: system-ui, sans-serif; }
       #shell { display: flex; flex-direction: column; height: 100%; }
-      #viewport { flex: 1; position: relative; }
+      #toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-bottom: 1px solid #283140; background: #101722; }
+      #toolbar strong { font-size: 13px; letter-spacing: .04em; }
+      #fullscreen { min-height: 32px; padding: 0 12px; border: 1px solid #465267; border-radius: 7px; color: #edf4ff; background: #1a2533; cursor: pointer; }
+      #fullscreen:disabled { opacity: .42; cursor: not-allowed; }
+      #viewport { flex: 1; position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; overflow: hidden; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background: #020409; }
+      #game-stage { width: 100%; height: 100%; min-width: 0; min-height: 0; }
       #game-frame { width: 100%; height: 100%; border: 0; display: block; }
+      #rotate-hint { position: absolute; z-index: 3; inset: auto 10px 10px 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 520px; margin: auto; padding: 10px 12px; color: #eaf8ff; background: rgba(16, 35, 48, .96); border: 1px solid #49758c; border-radius: 10px; font-size: 13px; }
+      #rotate-hint[hidden] { display: none; }
+      #dismiss-rotate-hint { min-width: 34px; min-height: 34px; color: inherit; background: transparent; border: 1px solid #66889a; border-radius: 7px; }
       #watermark { padding: 6px 12px; background: rgba(11, 15, 20, 0.92); font-size: 12px; letter-spacing: 0.04em; text-align: center; color: #9aa4af; user-select: none; }
     </style>
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; ${frameSrc}"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; ${frameSrc}"
     />
   </head>
   <body>
     <div id="shell">
+      <div id="toolbar">
+        <strong>Buildcade Preview</strong>
+        <button id="fullscreen" type="button" aria-label="Enter fullscreen" aria-pressed="false"${fullscreenDisabled}>Enter fullscreen</button>
+      </div>
       <div id="viewport">
-        <iframe
+        <div id="game-stage"><iframe
           id="game-frame"
           src="${gameUrl}"
           sandbox="${sandbox}"
           title="Buildcade preview"
-        ></iframe>
+        ></iframe></div>
+        <aside id="rotate-hint" role="status" hidden><span></span><button id="dismiss-rotate-hint" type="button">\xD7</button></aside>
       </div>
-      <div id="watermark">Buildcade Preview \xB7 local runtime</div>
+      <div id="watermark" data-buildcade-watermark="fixed-v1">Buildcade Preview \xB7 local runtime</div>
     </div>
+    <script>
+      (() => {
+        const shell = document.getElementById("shell");
+        const frame = document.getElementById("game-frame");
+        const viewport = document.getElementById("viewport");
+        const gameStage = document.getElementById("game-stage");
+        const rotateHint = document.getElementById("rotate-hint");
+        const rotateHintText = rotateHint.querySelector("span");
+        const dismissRotateHint = document.getElementById("dismiss-rotate-hint");
+        const button = document.getElementById("fullscreen");
+        const expectedOrigin = ${JSON.stringify(frameOrigin)};
+        const enabled = ${fullscreenEnabled};
+        const aspectRatio = ${JSON.stringify(display.aspectRatio ?? "")};
+        const orientation = ${JSON.stringify(display.orientation ?? "any")};
+        const locale = navigator.language.toLowerCase();
+        const text = locale.startsWith("zh-tw") || locale.startsWith("zh-hk")
+          ? { enter: "\u9032\u5165\u5168\u87A2\u5E55", exit: "\u9000\u51FA\u5168\u87A2\u5E55", unavailable: "\u6B64\u904A\u6232\u672A\u5BA3\u544A\u5168\u87A2\u5E55\u6B0A\u9650", rotate: "\u65CB\u8F49\u88DD\u7F6E\u53EF\u7372\u5F97\u904A\u6232\u9810\u671F\u7248\u9762\u3002", dismiss: "\u95DC\u9589\u65CB\u8F49\u5EFA\u8B70" }
+          : locale.startsWith("zh")
+            ? { enter: "\u8FDB\u5165\u5168\u5C4F", exit: "\u9000\u51FA\u5168\u5C4F", unavailable: "\u6B64\u6E38\u620F\u672A\u58F0\u660E\u5168\u5C4F\u6743\u9650", rotate: "\u65CB\u8F6C\u8BBE\u5907\u53EF\u83B7\u5F97\u6E38\u620F\u9884\u671F\u5E03\u5C40\u3002", dismiss: "\u5173\u95ED\u65CB\u8F6C\u5EFA\u8BAE" }
+            : { enter: "Enter fullscreen", exit: "Exit fullscreen", unavailable: "Fullscreen is not declared for this game", rotate: "Rotate your device for the intended game layout.", dismiss: "Dismiss rotation suggestion" };
+        rotateHintText.textContent = text.rotate;
+        dismissRotateHint.setAttribute("aria-label", text.dismiss);
+        let rotateHintDismissed = false;
+        const ratioMatch = /^([1-9][0-9]*):([1-9][0-9]*)$/.exec(aspectRatio);
+        const ratio = ratioMatch ? Number(ratioMatch[1]) / Number(ratioMatch[2]) : null;
+        const updateViewport = () => {
+          const width = viewport.clientWidth;
+          const height = viewport.clientHeight;
+          if (!ratio || width <= 0 || height <= 0) {
+            gameStage.style.width = "100%";
+            gameStage.style.height = "100%";
+          } else if (width / height > ratio) {
+            gameStage.style.width = Math.floor(height * ratio) + "px";
+            gameStage.style.height = height + "px";
+          } else {
+            gameStage.style.width = width + "px";
+            gameStage.style.height = Math.floor(width / ratio) + "px";
+          }
+          const narrowOrTouch = width <= 720 || window.matchMedia("(pointer: coarse)").matches;
+          const isLandscape = window.innerWidth > window.innerHeight;
+          const mismatch = orientation === "portrait" ? isLandscape : orientation === "landscape" ? !isLandscape : false;
+          rotateHint.hidden = !narrowOrTouch || !mismatch || rotateHintDismissed;
+        };
+        const sync = () => {
+          const active = document.fullscreenElement === shell;
+          const label = enabled ? (active ? text.exit : text.enter) : text.unavailable;
+          button.textContent = label;
+          button.setAttribute("aria-label", label);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+          frame.contentWindow?.postMessage(
+            { type: "bridge.fullscreen.state", version: "core.v1", active },
+            expectedOrigin,
+          );
+        };
+        button.addEventListener("click", () => {
+          if (!enabled) return;
+          if (document.fullscreenElement === shell) {
+            document.exitFullscreen?.().catch(() => {});
+          } else {
+            shell.requestFullscreen?.().catch(() => {});
+          }
+        });
+        dismissRotateHint.addEventListener("click", () => {
+          rotateHintDismissed = true;
+          rotateHint.hidden = true;
+        });
+        window.addEventListener("message", (event) => {
+          if (!enabled || event.origin !== expectedOrigin || event.source !== frame.contentWindow) return;
+          if (event.data?.version !== "core.v1") return;
+          if (event.data.type === "bridge.fullscreen.request") {
+            shell.requestFullscreen?.().catch(() => {});
+          }
+          if (event.data.type === "bridge.fullscreen.exit" && document.fullscreenElement === shell) {
+            document.exitFullscreen?.().catch(() => {});
+          }
+        });
+        document.addEventListener("fullscreenchange", () => {
+          sync();
+          updateViewport();
+        });
+        if ("ResizeObserver" in window) {
+          new ResizeObserver(updateViewport).observe(viewport);
+        } else {
+          window.addEventListener("resize", updateViewport);
+        }
+        window.visualViewport?.addEventListener("resize", updateViewport);
+        window.addEventListener("orientationchange", updateViewport);
+        sync();
+        updateViewport();
+      })();
+    </script>
   </body>
 </html>
 `;
@@ -5336,7 +6132,7 @@ async function serveStatic(root, pathname, entry, req, res, headers) {
   }
   let info;
   try {
-    info = await (0, import_promises8.stat)(target);
+    info = await (0, import_promises9.stat)(target);
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Not found");
@@ -5356,7 +6152,7 @@ async function serveStatic(root, pathname, entry, req, res, headers) {
     res.end();
     return;
   }
-  const data = await (0, import_promises8.readFile)(target);
+  const data = await (0, import_promises9.readFile)(target);
   res.end(data);
 }
 async function startPreviewServer(root, manifest, options = {}) {
@@ -5385,7 +6181,7 @@ async function startPreviewServer(root, manifest, options = {}) {
       res.end();
       return;
     }
-    res.end(buildShellHtml(policy, gameUrl));
+    res.end(buildShellHtml(policy, gameUrl, manifest.display));
   });
   const gameServer = (0, import_node_http.createServer)((req, res) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
@@ -5452,13 +6248,37 @@ function openBrowser(url) {
   }
 }
 function registerPreviewCommand(program3) {
-  program3.command("preview [dir]").description("Serve the artifact in a production-like sandboxed preview").option("--no-open", "do not auto-open the browser").option("--json", "machine-readable startup output").action(
+  program3.command("preview [dir]").description("Serve the artifact in a production-like sandboxed preview").option(
+    "--profile <id[@version]>",
+    "compatibility profile id and optional exact version"
+  ).option("--no-open", "do not auto-open the browser").option("--json", "machine-readable startup output").action(
     async (dirArg, opts) => {
       const root = import_node_path8.default.resolve(process.cwd(), dirArg ?? ".");
-      const result = await validateProject(root);
+      let result;
+      try {
+        result = await validateProject(root, {
+          profile: resolveCliProfile(opts.profile)
+        });
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+        return;
+      }
       if (result.validation === "fail") {
-        process.stderr.write("Preview not started.\nValidation failed.\n\n");
-        renderDiagnostics(result.diagnostics, process.stderr);
+        if (opts.json) {
+          printJson({
+            schemaVersion: 1,
+            command: "preview",
+            ok: false,
+            result: { artifactReport: result.artifactReport },
+            diagnostics: result.artifactReport.diagnostics
+          });
+        } else {
+          process.stderr.write(
+            "Preview not started.\nValidation failed.\n\n"
+          );
+          renderDiagnostics(result.diagnostics, process.stderr);
+        }
         process.exitCode = 1;
         return;
       }
@@ -5487,7 +6307,9 @@ function registerPreviewCommand(program3) {
             status: "running",
             url: preview.shellUrl,
             pid: process.pid,
-            spec: manifest.spec ?? GAME_SPEC_VERSION
+            spec: manifest.spec ?? GAME_SPEC_VERSION,
+            compatibility: result.compatibility,
+            artifactReport: result.artifactReport
           }
         });
       } else {
@@ -5522,6 +6344,7 @@ Preview stopped (${signal}).
 
 // src/commands/login.ts
 var import_node_readline = require("node:readline");
+var import_node_child_process2 = require("node:child_process");
 
 // ../../packages/domain-contracts/src/documentation.ts
 var DOCUMENTATION_IMPORT_LIMITS = {
@@ -5546,6 +6369,11 @@ function queryPath(pathname, values) {
 var API_AUTH_ROUTES = {
   adminDevLogin: "/api/auth/admin/dev-login",
   cliLogin: "/api/auth/cli/login",
+  cliDeviceGrants: "/api/auth/cli/device-grants",
+  cliDeviceGrantAuthorize: "/api/auth/cli/device-grants/authorize",
+  cliDeviceToken: "/api/auth/cli/device-token",
+  cliToken: "/api/auth/cli/token",
+  currentCliCredential: "/api/auth/cli/credentials/current",
   deviceGithubStart: "/api/auth/device/github/start",
   deviceGithubPoll: "/api/auth/device/github/poll",
   emailVerificationRequest: "/api/auth/email-verification/request",
@@ -5560,6 +6388,7 @@ var API_AUTH_ROUTES = {
   staffTotpEnrollment: "/api/auth/staff/totp/enrollments",
   staffTotpEnrollmentConfirm: "/api/auth/staff/totp/enrollments/confirm",
   staffSession: "/api/auth/staff/sessions",
+  staffSessionClaim: "/api/auth/staff/sessions/claim",
   currentStaffSession: "/api/auth/staff/sessions/current",
   privilegedSession: "/api/auth/privileged-sessions",
   currentPrivilegedSession: "/api/auth/privileged-sessions/current",
@@ -5575,6 +6404,8 @@ var API_AUTH_ROUTES = {
   passwordChange: "/api/auth/password/change",
   productProfileCompletion: "/api/auth/product/profile-completion",
   productAuthentication: "/api/me/authentication",
+  productGithubConnection: "/api/me/authentication/providers/github",
+  productGithubDisconnection: "/api/me/authentication/providers/github/disconnections",
   productSessions: "/api/me/sessions",
   productSessionsRevokeOthers: "/api/me/sessions/revoke-others",
   productTotpEnrollments: "/api/auth/product/totp/enrollments",
@@ -5584,6 +6415,70 @@ var API_AUTH_ROUTES = {
   magicLinkRequest: "/api/auth/magic-link/request",
   magicLinkVerify: "/api/auth/magic-link/verify"
 };
+var ADMIN_ROUTE_PATTERNS = {
+  home: "/",
+  access: "/access",
+  search: "/search",
+  users: "/users",
+  user: "/users/:userId",
+  userOverview: "/users/:userId/overview",
+  userWorkspaces: "/users/:userId/workspaces",
+  userActivity: "/users/:userId/activity",
+  userSafety: "/users/:userId/safety",
+  userAuthentication: "/users/:userId/authentication",
+  accountEnforcements: "/users/enforcements",
+  accountEnforcement: "/users/enforcements/:enforcementId",
+  workspace: "/workspaces/:workspaceId",
+  audit: "/audit",
+  auditEvent: "/audit/:eventId",
+  propagations: "/propagations",
+  propagation: "/propagations/:correlationId",
+  reviews: "/reviews",
+  review: "/reviews/:submissionId",
+  reviewContent: "/reviews/:submissionId/content",
+  reviewBuild: "/reviews/:submissionId/build",
+  reviewDecision: "/reviews/:submissionId/decision",
+  reviewHistory: "/reviews/:submissionId/history",
+  reviewMedia: "/reviews/media",
+  reviewMediaAsset: "/reviews/media/:assetId",
+  catalogGames: "/catalog/games",
+  catalogGame: "/catalog/games/:gameId",
+  taxonomy: "/catalog/taxonomy",
+  taxonomyVersion: "/catalog/taxonomy/:versionId",
+  media: "/catalog/media",
+  mediaAsset: "/catalog/media/:assetId",
+  official: "/catalog/official",
+  officialPublisher: "/catalog/official/publishers/:publisherId",
+  officialIntake: "/catalog/official/intakes/:intakeId",
+  documentation: "/documentation",
+  discoveryCollections: "/discovery/collections",
+  discoveryCollection: "/discovery/collections/:collectionId",
+  discoveryPlacements: "/discovery/placements",
+  discoveryCampaign: "/discovery/campaigns/:campaignId",
+  reports: "/reports",
+  report: "/reports/:reportId",
+  moderation: "/moderation",
+  moderationCase: "/moderation/cases/:caseId",
+  security: "/security",
+  securityCase: "/security/cases/:caseId",
+  appeals: "/appeals",
+  appeal: "/appeals/:appealId",
+  resources: "/resources",
+  resource: "/resources/:artifactId",
+  configuration: "/configuration",
+  configurationDefinition: "/configuration/:definitionKey",
+  insights: "/insights",
+  growth: "/insights/growth",
+  exports: "/exports",
+  export: "/exports/:exportId",
+  guide: "/guide",
+  verify: "/verify",
+  login: "/login"
+};
+var ADMIN_AUTH_PATHS = /* @__PURE__ */ new Set([
+  ADMIN_ROUTE_PATTERNS.login,
+  ADMIN_ROUTE_PATTERNS.verify
+]);
 var productRoutes = {
   home: (locale) => `/${locale}`,
   login: (locale, options = {}) => queryPath(`/${locale}/login`, {
@@ -5598,6 +6493,7 @@ var productRoutes = {
   passwordResetRequest: (locale) => `/${locale}/auth/password/forgot`,
   passwordReset: (locale, options = {}) => queryPath(`/${locale}/auth/password/reset`, options),
   profileCompletion: (locale, options = {}) => queryPath(`/${locale}/auth/profile-completion`, options),
+  cliAuthorization: (locale, options = {}) => queryPath(`/${locale}/auth/cli/authorize`, options),
   accountSecurity: (locale) => `/${locale}/account/security`,
   account: (locale) => `/${locale}/account`,
   discover: (locale) => `/${locale}/explore`,
@@ -5745,17 +6641,18 @@ async function apiRequest(apiUrl, pathname, options = {}) {
   const text = await response.text();
   const data = text ? JSON.parse(text) : void 0;
   if (!response.ok) {
+    const payloadError = data?.error;
     throw new ApiError(
-      data?.error?.message ?? `Request failed (${response.status})`,
+      (typeof payloadError === "object" ? payloadError.message : void 0) ?? data?.errorDescription ?? (typeof payloadError === "string" ? payloadError : void 0) ?? `Request failed (${response.status})`,
       response.status,
-      data?.error?.code
+      typeof payloadError === "object" ? payloadError.code : payloadError
     );
   }
   return data;
 }
 
 // src/auth/credentials.ts
-var import_promises9 = require("node:fs/promises");
+var import_promises10 = require("node:fs/promises");
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path9 = __toESM(require("node:path"), 1);
 var CredentialsError = class extends Error {
@@ -5768,12 +6665,12 @@ var DEFAULT_CREDENTIALS_DIR = import_node_path9.default.join(import_node_os.defa
 var CREDENTIALS_FILE_NAME = "credentials.json";
 async function loadCredentials(dir = DEFAULT_CREDENTIALS_DIR, apiUrl = defaultApiUrl()) {
   try {
-    const text = await (0, import_promises9.readFile)(import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME), "utf8");
+    const text = await (0, import_promises10.readFile)(import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME), "utf8");
     const document = JSON.parse(text);
     const targetOrigin = normalizeApiOrigin(apiUrl);
-    if (isCredentialStore(document)) {
-      const profile = document.profiles[targetOrigin];
-      return profile?.token ? { apiUrl: targetOrigin, ...profile } : null;
+    if (isCredentialStore(document) || isPreviousCredentialStore(document)) {
+      const profile2 = document.profiles[targetOrigin];
+      return profile2?.token ? { apiUrl: targetOrigin, ...profile2 } : null;
     }
     if (isLegacyCredentials(document)) {
       const legacyOrigin = normalizeApiOrigin(document.apiUrl);
@@ -5799,21 +6696,28 @@ function isCredentialProfile(value) {
   return isRecord(value) && typeof value["token"] === "string";
 }
 function isCredentialStore(value) {
-  if (!isRecord(value) || value["schemaVersion"] !== 2 || !isRecord(value["profiles"])) {
+  if (!isRecord(value) || value["schemaVersion"] !== 3 || !isRecord(value["profiles"])) {
     return false;
   }
   return Object.values(value["profiles"]).every(isCredentialProfile);
+}
+function isPreviousCredentialStore(value) {
+  return isRecord(value) && value["schemaVersion"] === 2 && isRecord(value["profiles"]) && Object.values(value["profiles"]).every(isCredentialProfile);
 }
 function isLegacyCredentials(value) {
   return isRecord(value) && typeof value["token"] === "string" && typeof value["apiUrl"] === "string";
 }
 async function loadCredentialStore(dir) {
   try {
-    const text = await (0, import_promises9.readFile)(import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME), "utf8");
+    const text = await (0, import_promises10.readFile)(import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME), "utf8");
     const document = JSON.parse(text);
-    return isCredentialStore(document) ? document : { schemaVersion: 2, profiles: {} };
+    if (isCredentialStore(document)) return document;
+    if (isPreviousCredentialStore(document)) {
+      return { schemaVersion: 3, profiles: document.profiles };
+    }
+    return { schemaVersion: 3, profiles: {} };
   } catch {
-    return { schemaVersion: 2, profiles: {} };
+    return { schemaVersion: 3, profiles: {} };
   }
 }
 async function saveCredentials(credentials, dir = DEFAULT_CREDENTIALS_DIR) {
@@ -5822,13 +6726,17 @@ async function saveCredentials(credentials, dir = DEFAULT_CREDENTIALS_DIR) {
   const store = await loadCredentialStore(dir);
   store.profiles[apiUrl] = {
     token: credentials.token,
+    expiresAt: credentials.expiresAt,
+    refreshToken: credentials.refreshToken,
+    refreshExpiresAt: credentials.refreshExpiresAt,
+    scopes: credentials.scopes,
     user: credentials.user,
     workspace: credentials.workspace
   };
-  await (0, import_promises9.mkdir)(dir, { recursive: true });
-  await (0, import_promises9.writeFile)(file, JSON.stringify(store, null, 2) + "\n", "utf8");
+  await (0, import_promises10.mkdir)(dir, { recursive: true });
+  await (0, import_promises10.writeFile)(file, JSON.stringify(store, null, 2) + "\n", "utf8");
   try {
-    await (0, import_promises9.chmod)(file, 384);
+    await (0, import_promises10.chmod)(file, 384);
   } catch {
   }
 }
@@ -5836,11 +6744,11 @@ async function removeCredentials(dir = DEFAULT_CREDENTIALS_DIR, apiUrl) {
   const file = import_node_path9.default.join(dir, CREDENTIALS_FILE_NAME);
   let document;
   try {
-    document = JSON.parse(await (0, import_promises9.readFile)(file, "utf8"));
+    document = JSON.parse(await (0, import_promises10.readFile)(file, "utf8"));
   } catch {
     return 0;
   }
-  const store = isCredentialStore(document) ? document : { schemaVersion: 2, profiles: {} };
+  const store = isCredentialStore(document) ? document : isPreviousCredentialStore(document) ? { schemaVersion: 3, profiles: document.profiles } : { schemaVersion: 3, profiles: {} };
   const origins = apiUrl ? [normalizeApiOrigin(apiUrl)] : Object.keys(store.profiles);
   let removed = 0;
   if (isLegacyCredentials(document)) {
@@ -5854,32 +6762,13 @@ async function removeCredentials(dir = DEFAULT_CREDENTIALS_DIR, apiUrl) {
     }
   }
   if (removed === 0) return 0;
-  await (0, import_promises9.mkdir)(dir, { recursive: true });
-  await (0, import_promises9.writeFile)(file, JSON.stringify(store, null, 2) + "\n", "utf8");
+  await (0, import_promises10.mkdir)(dir, { recursive: true });
+  await (0, import_promises10.writeFile)(file, JSON.stringify(store, null, 2) + "\n", "utf8");
   try {
-    await (0, import_promises9.chmod)(file, 384);
+    await (0, import_promises10.chmod)(file, 384);
   } catch {
   }
   return removed;
-}
-
-// src/output/locale.ts
-function normalize(value) {
-  const locale = value?.replace("_", "-").toLowerCase();
-  if (!locale) return null;
-  if (locale.startsWith("zh-tw") || locale.startsWith("zh-hk")) return "zh-TW";
-  if (locale.startsWith("zh")) return "zh-CN";
-  if (locale.startsWith("en")) return "en";
-  return null;
-}
-function cliLocale(argv = process.argv) {
-  const index = argv.findIndex((item) => item === "--locale");
-  const inline = argv.find((item) => item.startsWith("--locale="))?.slice(9);
-  return normalize(index >= 0 ? argv[index + 1] : inline) ?? normalize(process.env["LC_ALL"] ?? process.env["LANG"]) ?? normalize(Intl.DateTimeFormat().resolvedOptions().locale) ?? "en";
-}
-function human(en, zhCN, zhTW) {
-  const locale = cliLocale();
-  return locale === "zh-CN" ? zhCN : locale === "zh-TW" ? zhTW : en;
 }
 
 // src/commands/login.ts
@@ -5903,10 +6792,38 @@ function fail(err2) {
   console.error(`error: ${error.message}`);
   process.exitCode = error.status === 401 || error.status === 403 ? 4 : 5;
 }
-async function finishLogin(apiUrl, data, json) {
-  await saveCredentials({
+function writeProgress(message) {
+  process.stderr.write(`${message}
+`);
+}
+async function tryOpenBrowser(url) {
+  const command = process.platform === "win32" ? "rundll32.exe" : process.platform === "darwin" ? "open" : "xdg-open";
+  const args = process.platform === "win32" ? ["url.dll,FileProtocolHandler", url] : [url];
+  return new Promise((resolve) => {
+    try {
+      const child = (0, import_node_child_process2.spawn)(command, args, {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true
+      });
+      child.once("spawn", () => {
+        child.unref();
+        resolve(true);
+      });
+      child.once("error", () => resolve(false));
+    } catch {
+      resolve(false);
+    }
+  });
+}
+async function finishLogin(apiUrl, data, json, persist = saveCredentials) {
+  await persist({
     apiUrl,
     token: data.token,
+    refreshToken: data.refreshToken,
+    expiresAt: data.expiresIn === void 0 ? void 0 : new Date(Date.now() + data.expiresIn * 1e3).toISOString(),
+    refreshExpiresAt: data.refreshExpiresIn === void 0 ? void 0 : new Date(Date.now() + data.refreshExpiresIn * 1e3).toISOString(),
+    scopes: data.scopes,
     user: data.user,
     workspace: data.workspace
   });
@@ -5931,7 +6848,7 @@ async function finishLogin(apiUrl, data, json) {
     );
   }
 }
-async function deviceFlowLogin(opts) {
+async function githubDeviceFlowLogin(opts) {
   try {
     const start = await apiRequest(opts.apiUrl, API_AUTH_ROUTES.deviceGithubStart, {
       method: "POST",
@@ -5969,6 +6886,26 @@ async function deviceFlowLogin(opts) {
         method: "POST",
         body: { stateHash: start.stateHash }
       });
+      if (poll.status === "account_link_required") {
+        console.error(
+          `error: ${human(
+            "This GitHub account matches an existing Buildcade account but is not connected yet.",
+            "\u6B64 GitHub \u8D26\u6237\u4E0E\u73B0\u6709 Buildcade \u8D26\u6237\u5339\u914D\uFF0C\u4F46\u5C1A\u672A\u8FDE\u63A5\u3002",
+            "\u6B64 GitHub \u5E33\u6236\u8207\u73FE\u6709 Buildcade \u5E33\u6236\u76F8\u7B26\uFF0C\u4F46\u5C1A\u672A\u9023\u63A5\u3002"
+          )}`
+        );
+        if (poll.actionUrl) {
+          console.error(
+            human(
+              `Sign in to Buildcade, connect GitHub in Account security, then run login again: ${poll.actionUrl}`,
+              `\u8BF7\u767B\u5F55 Buildcade\uFF0C\u5728\u8D26\u6237\u5B89\u5168\u4E2D\u8FDE\u63A5 GitHub\uFF0C\u7136\u540E\u91CD\u65B0\u8FD0\u884C\u767B\u5F55\uFF1A${poll.actionUrl}`,
+              `\u8ACB\u767B\u5165 Buildcade\uFF0C\u5728\u5E33\u6236\u5B89\u5168\u4E2D\u9023\u63A5 GitHub\uFF0C\u7136\u5F8C\u91CD\u65B0\u57F7\u884C\u767B\u5165\uFF1A${poll.actionUrl}`
+            )
+          );
+        }
+        process.exitCode = 4;
+        return;
+      }
       const token = poll.token;
       if (poll.status === "authorized" && token) {
         await finishLogin(
@@ -5985,6 +6922,117 @@ async function deviceFlowLogin(opts) {
     process.exitCode = 5;
   } catch (err2) {
     fail(err2);
+  }
+}
+async function deviceAuthorizationLogin(opts, dependencies = {}) {
+  let emittedJson = false;
+  try {
+    const start = await apiRequest(opts.apiUrl, API_AUTH_ROUTES.cliDeviceGrants, {
+      method: "POST",
+      body: { locale: cliLocale() }
+    });
+    const now = dependencies.now ?? Date.now;
+    const opened = opts.open === false ? false : await (dependencies.openBrowser ?? tryOpenBrowser)(
+      start.verificationUriComplete
+    );
+    writeProgress(
+      opts.open === false ? human(
+        "Browser opening skipped.",
+        "\u5DF2\u8DF3\u8FC7\u81EA\u52A8\u6253\u5F00\u6D4F\u89C8\u5668\u3002",
+        "\u5DF2\u7565\u904E\u81EA\u52D5\u958B\u555F\u700F\u89BD\u5668\u3002"
+      ) : opened ? human(
+        "Opened the Buildcade sign-in page.",
+        "\u5DF2\u6253\u5F00 Buildcade \u767B\u5F55\u786E\u8BA4\u9875\u3002",
+        "\u5DF2\u958B\u555F Buildcade \u767B\u5165\u78BA\u8A8D\u9801\u3002"
+      ) : human(
+        "Could not open a browser automatically.",
+        "\u65E0\u6CD5\u81EA\u52A8\u6253\u5F00\u6D4F\u89C8\u5668\u3002",
+        "\u7121\u6CD5\u81EA\u52D5\u958B\u555F\u700F\u89BD\u5668\u3002"
+      )
+    );
+    writeProgress(
+      human(
+        `Open: ${start.verificationUriComplete}`,
+        `\u6253\u5F00\uFF1A${start.verificationUriComplete}`,
+        `\u958B\u555F\uFF1A${start.verificationUriComplete}`
+      )
+    );
+    writeProgress(
+      human(
+        `Confirmation code: ${start.userCode}`,
+        `\u786E\u8BA4\u7801\uFF1A${start.userCode}`,
+        `\u78BA\u8A8D\u78BC\uFF1A${start.userCode}`
+      )
+    );
+    writeProgress(
+      human("Waiting for confirmation...", "\u6B63\u5728\u7B49\u5F85\u786E\u8BA4\u2026\u2026", "\u6B63\u5728\u7B49\u5F85\u78BA\u8A8D\u2026\u2026")
+    );
+    let intervalSeconds = Math.max(start.interval, 5);
+    const deadline = now() + start.expiresIn * 1e3;
+    while (now() < deadline) {
+      await (dependencies.wait ?? sleep)(intervalSeconds * 1e3);
+      try {
+        const token = await apiRequest(
+          opts.apiUrl,
+          API_AUTH_ROUTES.cliDeviceToken,
+          { method: "POST", body: { deviceCode: start.deviceCode } }
+        );
+        await finishLogin(
+          opts.apiUrl,
+          {
+            token: token.accessToken,
+            refreshToken: token.refreshToken,
+            expiresIn: token.expiresIn,
+            refreshExpiresIn: token.refreshExpiresIn,
+            scopes: token.scopes,
+            user: token.user,
+            workspace: token.workspace
+          },
+          opts.json ?? false,
+          dependencies.persist
+        );
+        emittedJson = Boolean(opts.json);
+        return;
+      } catch (error) {
+        const apiError = error;
+        if (apiError.code === "authorization_pending") continue;
+        if (apiError.code === "slow_down") {
+          intervalSeconds += 5;
+          continue;
+        }
+        if (apiError.code === "access_denied") {
+          throw new Error(
+            human(
+              "CLI authorization was cancelled.",
+              "CLI \u6388\u6743\u5DF2\u53D6\u6D88\u3002",
+              "CLI \u6388\u6B0A\u5DF2\u53D6\u6D88\u3002"
+            )
+          );
+        }
+        if (apiError.code === "expired_token") break;
+        throw error;
+      }
+    }
+    throw new Error(human("authorization timed out", "\u6388\u6743\u8D85\u65F6", "\u6388\u6B0A\u903E\u6642"));
+  } catch (error) {
+    if (opts.json && !emittedJson) {
+      const apiError = error;
+      printJson({
+        schemaVersion: 1,
+        command: "login",
+        ok: false,
+        result: {
+          authenticated: false,
+          error: {
+            code: apiError.code ?? "LOGIN_FAILED",
+            message: apiError.message
+          }
+        }
+      });
+    } else {
+      console.error(`error: ${error.message}`);
+    }
+    process.exitCode = 5;
   }
 }
 async function magicLinkLogin(opts) {
@@ -6027,7 +7075,7 @@ async function magicLinkLogin(opts) {
   }
 }
 function registerLoginCommand(program3) {
-  program3.command("login").description("Sign in to Buildcade (GitHub device flow by default)").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").option("--email <email>", "sign in with an email verification link").option(
+  program3.command("login").description("Sign in to Buildcade in your browser").option("--json", "machine-readable output").option("--api-url <url>", "API base origin").option("--email <email>", "sign in with an email verification link").option("--github", "use the legacy GitHub Device Flow").option("--no-open", "do not open a browser automatically").option(
     "--dev",
     "use the local developer credential endpoint (requires --api-url)"
   ).action(
@@ -6055,7 +7103,15 @@ function registerLoginCommand(program3) {
         });
         return;
       }
-      await deviceFlowLogin({ apiUrl, json: opts.json });
+      if (opts.github) {
+        await githubDeviceFlowLogin({ apiUrl, json: opts.json });
+        return;
+      }
+      await deviceAuthorizationLogin({
+        apiUrl,
+        json: opts.json,
+        open: opts.open
+      });
     }
   );
 }
@@ -6065,6 +7121,69 @@ async function devLogin(apiUrl, json) {
     await finishLogin(apiUrl, data, json);
   } catch (err2) {
     fail(err2);
+  }
+}
+
+// src/auth/session.ts
+function expiringSoon(expiresAt) {
+  return Boolean(
+    expiresAt && new Date(expiresAt).getTime() <= Date.now() + 3e4
+  );
+}
+async function refreshCredentials(credentials, credentialsDir) {
+  if (!credentials.refreshToken) return credentials;
+  const response = await apiRequest(
+    credentials.apiUrl,
+    API_AUTH_ROUTES.cliToken,
+    {
+      method: "POST",
+      body: {
+        grantType: "refresh_token",
+        refreshToken: credentials.refreshToken
+      }
+    }
+  );
+  const now = Date.now();
+  const next = {
+    apiUrl: credentials.apiUrl,
+    token: response.accessToken,
+    refreshToken: response.refreshToken,
+    expiresAt: new Date(now + response.expiresIn * 1e3).toISOString(),
+    refreshExpiresAt: new Date(
+      now + response.refreshExpiresIn * 1e3
+    ).toISOString(),
+    scopes: response.scopes ?? credentials.scopes,
+    user: response.user ?? credentials.user,
+    workspace: response.workspace ?? credentials.workspace
+  };
+  await saveCredentials(next, credentialsDir);
+  return next;
+}
+async function loadUsableCredentials(apiUrl, credentialsDir) {
+  const credentials = await loadCredentials(credentialsDir, apiUrl);
+  if (!credentials) return null;
+  if (credentials.refreshToken && expiringSoon(credentials.expiresAt)) {
+    return refreshCredentials(credentials, credentialsDir);
+  }
+  return credentials;
+}
+async function authenticatedApiRequest(apiUrl, pathname, options = {}) {
+  let credentials = await loadUsableCredentials(apiUrl);
+  if (!credentials) throw new ApiError("Not signed in.", 401, "NOT_SIGNED_IN");
+  try {
+    return await apiRequest(apiUrl, pathname, {
+      ...options,
+      token: credentials.token
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401 || !credentials.refreshToken) {
+      throw error;
+    }
+    credentials = await refreshCredentials(credentials);
+    return apiRequest(apiUrl, pathname, {
+      ...options,
+      token: credentials.token
+    });
   }
 }
 
@@ -6082,7 +7201,7 @@ function registerWhoamiCommand(program3) {
     reportApiTarget(apiUrl);
     let credentials;
     try {
-      credentials = await loadCredentials(void 0, apiUrl);
+      credentials = await loadUsableCredentials(apiUrl);
     } catch (error) {
       if (error instanceof CredentialsError) {
         console.error(`error: ${error.message}`);
@@ -6116,7 +7235,7 @@ function registerWhoamiCommand(program3) {
       return;
     }
     try {
-      const me = await apiRequest(apiUrl, "/api/me", { token: credentials.token });
+      const me = await authenticatedApiRequest(apiUrl, "/api/me");
       if (opts.json) {
         printJson({
           schemaVersion: 1,
@@ -6153,15 +7272,15 @@ function registerWhoamiCommand(program3) {
 }
 
 // src/commands/upload.ts
-var import_node_crypto2 = require("node:crypto");
+var import_node_crypto3 = require("node:crypto");
 var import_node_path12 = __toESM(require("node:path"), 1);
 
 // src/commands/resource-context.ts
-var import_promises11 = require("node:readline/promises");
+var import_promises12 = require("node:readline/promises");
 var import_node_path11 = __toESM(require("node:path"), 1);
 
 // src/project/association.ts
-var import_promises10 = require("node:fs/promises");
+var import_promises11 = require("node:fs/promises");
 var import_node_path10 = __toESM(require("node:path"), 1);
 var ASSOCIATION_PATH = import_node_path10.default.join(".buildcade", "project.json");
 function isAssociation(value) {
@@ -6172,7 +7291,7 @@ function isAssociation(value) {
 async function loadProjectAssociation(root) {
   try {
     const value = JSON.parse(
-      await (0, import_promises10.readFile)(import_node_path10.default.join(root, ASSOCIATION_PATH), "utf8")
+      await (0, import_promises11.readFile)(import_node_path10.default.join(root, ASSOCIATION_PATH), "utf8")
     );
     if (!isAssociation(value)) {
       throw new Error(
@@ -6187,8 +7306,8 @@ async function loadProjectAssociation(root) {
 }
 async function saveProjectAssociation(root, association) {
   const directory = import_node_path10.default.join(root, ".buildcade");
-  await (0, import_promises10.mkdir)(directory, { recursive: true });
-  await (0, import_promises10.writeFile)(
+  await (0, import_promises11.mkdir)(directory, { recursive: true });
+  await (0, import_promises11.writeFile)(
     import_node_path10.default.join(root, ASSOCIATION_PATH),
     JSON.stringify(
       { ...association, apiUrl: normalizeApiOrigin(association.apiUrl) },
@@ -6212,7 +7331,7 @@ async function unlinkProject(root) {
 // src/commands/resource-context.ts
 async function requireResourceContext(requestedApiUrl) {
   const apiUrl = resolveApiOrigin(requestedApiUrl);
-  const credentials = await loadCredentials(void 0, apiUrl);
+  const credentials = await loadUsableCredentials(apiUrl);
   if (!credentials?.token || !credentials.workspace?.id) {
     const command = `buildcade login${requestedApiUrl ? ` --api-url ${apiUrl}` : ""}`;
     throw new Error(
@@ -6294,7 +7413,7 @@ async function resolveGame(context, input) {
     (game, index) => process.stderr.write(`${index + 1}. ${game.name} (${game.id})
 `)
   );
-  const readline = (0, import_promises11.createInterface)({
+  const readline = (0, import_promises12.createInterface)({
     input: process.stdin,
     output: process.stderr
   });
@@ -6322,10 +7441,10 @@ async function openUrl(url) {
       )
     );
   }
-  const { spawn: spawn3 } = await import("node:child_process");
+  const { spawn: spawn4 } = await import("node:child_process");
   const command = process.platform === "win32" ? "cmd" : process.platform === "darwin" ? "open" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
-  spawn3(command, args, {
+  spawn4(command, args, {
     detached: true,
     stdio: "ignore",
     windowsHide: true
@@ -6504,7 +7623,10 @@ async function createUploadSession(apiUrl, token, body) {
   }
 }
 function registerUploadCommand(program3) {
-  program3.command("upload [dir]").description("Validate, pack and upload an artifact to Buildcade").option("--game <id-or-name>", "target game ID or unique name").option("--json", "machine-readable output").option("--wait", "wait for build processing to finish").option("--timeout <seconds>", "wait timeout in seconds", "120").option("--open", "open the build in Creator Center").option("--api-url <url>", "API base origin").action(
+  program3.command("upload [dir]").description("Validate, pack and upload an artifact to Buildcade").option(
+    "--profile <id[@version]>",
+    "compatibility profile id and optional exact version"
+  ).option("--game <id-or-name>", "target game ID or unique name").option("--json", "machine-readable output").option("--wait", "wait for build processing to finish").option("--timeout <seconds>", "wait timeout in seconds", "120").option("--open", "open the build in Creator Center").option("--api-url <url>", "API base origin").action(
     async (dirArg, opts) => {
       let apiUrl;
       try {
@@ -6516,14 +7638,34 @@ function registerUploadCommand(program3) {
       }
       reportApiTarget(apiUrl);
       const root = import_node_path12.default.resolve(process.cwd(), dirArg ?? ".");
-      const validation = await validateProject(root);
+      let requestedProfile;
+      try {
+        requestedProfile = resolveCliProfile(opts.profile);
+      } catch (error) {
+        console.error(`error: ${error.message}`);
+        process.exitCode = 2;
+        return;
+      }
+      const validation = await validateProject(root, {
+        profile: requestedProfile
+      });
       if (validation.validation === "fail") {
-        process.stderr.write(
-          `Upload blocked: validation failed (${validation.errors} errors).
+        if (opts.json) {
+          printJson({
+            schemaVersion: 1,
+            command: "upload",
+            ok: false,
+            result: { artifactReport: validation.artifactReport },
+            diagnostics: validation.artifactReport.diagnostics
+          });
+        } else {
+          process.stderr.write(
+            `Upload blocked: validation failed (${validation.errors} errors).
 
 `
-        );
-        renderDiagnostics(validation.diagnostics, process.stderr);
+          );
+          renderDiagnostics(validation.diagnostics, process.stderr);
+        }
         process.exitCode = 1;
         return;
       }
@@ -6535,7 +7677,7 @@ function registerUploadCommand(program3) {
       }
       let credentials;
       try {
-        credentials = await loadCredentials(void 0, apiUrl);
+        credentials = await loadUsableCredentials(apiUrl);
       } catch (error) {
         if (error instanceof CredentialsError) {
           console.error(`error: ${error.message}`);
@@ -6569,13 +7711,14 @@ function registerUploadCommand(program3) {
           root
         });
         const zip = await createArtifactZip(root);
-        const sha256 = (0, import_node_crypto2.createHash)("sha256").update(zip.bytes).digest("hex");
+        const sha256 = (0, import_node_crypto3.createHash)("sha256").update(zip.bytes).digest("hex");
         const sizeBytes = zip.bytes.length;
         const session = await createUploadSession(apiUrl, credentials.token, {
           gameId: game.id,
           expectedSizeBytes: sizeBytes,
           expectedHash: sha256,
-          idempotencyKey: (0, import_node_crypto2.randomUUID)()
+          idempotencyKey: (0, import_node_crypto3.randomUUID)(),
+          ...requestedProfile ? { compatibilityProfile: requestedProfile } : {}
         });
         await apiRequest(
           apiUrl,
@@ -6617,9 +7760,11 @@ function registerUploadCommand(program3) {
                   buildNumber: completed.build.buildNumber,
                   artifactHash: completed.artifactHash,
                   status: terminal,
-                  creatorCenterUrl: url2
+                  creatorCenterUrl: url2,
+                  compatibility: validation.compatibility,
+                  artifactReport: status.compatibilityReport ?? validation.artifactReport
                 },
-                diagnostics: []
+                diagnostics: status.compatibilityReport?.diagnostics ?? validation.artifactReport.diagnostics
               });
             } else {
               console.log(
@@ -6644,9 +7789,11 @@ function registerUploadCommand(program3) {
                 buildNumber: completed.build.buildNumber,
                 artifactHash: completed.artifactHash,
                 status: terminal,
-                creatorCenterUrl: url2
+                creatorCenterUrl: url2,
+                compatibility: validation.compatibility,
+                artifactReport: status.compatibilityReport ?? validation.artifactReport
               },
-              diagnostics: status.diagnostics
+              diagnostics: status.compatibilityReport?.diagnostics ?? validation.artifactReport.diagnostics
             });
           } else {
             process.stderr.write(
@@ -6671,7 +7818,9 @@ function registerUploadCommand(program3) {
               buildNumber: completed.build.buildNumber,
               artifactHash: completed.artifactHash,
               status: "processing",
-              creatorCenterUrl: url
+              creatorCenterUrl: url,
+              compatibility: validation.compatibility,
+              artifactReport: validation.artifactReport
             }
           });
         } else {
@@ -6698,14 +7847,14 @@ function registerUploadCommand(program3) {
 }
 
 // src/commands/skill.ts
-var import_node_crypto3 = require("node:crypto");
-var import_promises12 = require("node:fs/promises");
+var import_node_crypto4 = require("node:crypto");
+var import_promises13 = require("node:fs/promises");
 var import_node_os2 = require("node:os");
 var import_node_path13 = __toESM(require("node:path"), 1);
 var SKILL_NAME = "buildcade-creator";
 async function exists(target) {
   try {
-    await (0, import_promises12.stat)(target);
+    await (0, import_promises13.stat)(target);
     return true;
   } catch {
     return false;
@@ -6745,7 +7894,7 @@ function destinationRoot(options) {
 }
 async function releaseVersion(root) {
   const manifest = JSON.parse(
-    await (0, import_promises12.readFile)(import_node_path13.default.join(root, "RELEASE-MANIFEST.json"), "utf8")
+    await (0, import_promises13.readFile)(import_node_path13.default.join(root, "RELEASE-MANIFEST.json"), "utf8")
   );
   if (typeof manifest.release !== "string" || !/^v\d+\.\d+\.\d+$/.test(manifest.release)) {
     throw new Error("Public release manifest has an invalid version.");
@@ -6754,7 +7903,7 @@ async function releaseVersion(root) {
 }
 async function verifyRelease(root) {
   const checksumFile = import_node_path13.default.join(root, "SHA256SUMS");
-  const lines = (await (0, import_promises12.readFile)(checksumFile, "utf8")).split(/\r?\n/u).filter(Boolean);
+  const lines = (await (0, import_promises13.readFile)(checksumFile, "utf8")).split(/\r?\n/u).filter(Boolean);
   if (lines.length === 0)
     throw new Error("Public release checksum list is empty.");
   const verified = /* @__PURE__ */ new Set();
@@ -6768,7 +7917,7 @@ async function verifyRelease(root) {
     if (!target.startsWith(prefix))
       throw new Error("Release checksum path escaped its root.");
     if (!await exists(target)) continue;
-    const actual = (0, import_node_crypto3.createHash)("sha256").update(await (0, import_promises12.readFile)(target)).digest("hex");
+    const actual = (0, import_node_crypto4.createHash)("sha256").update(await (0, import_promises13.readFile)(target)).digest("hex");
     if (actual !== match.groups["hash"]) {
       throw new Error(`Release checksum mismatch: ${relative}`);
     }
@@ -6808,7 +7957,7 @@ async function installSkill(options) {
   if (!await exists(import_node_path13.default.join(source, "SKILL.md"))) {
     throw new Error("Packaged Buildcade Creator Skill is missing.");
   }
-  await (0, import_promises12.mkdir)(skillRoot, { recursive: true });
+  await (0, import_promises13.mkdir)(skillRoot, { recursive: true });
   let backup;
   if (await exists(target)) {
     if (!options.upgrade) {
@@ -6817,23 +7966,23 @@ async function installSkill(options) {
       );
     }
     backup = await unusedBackupPath(target, release);
-    await (0, import_promises12.rename)(target, backup);
+    await (0, import_promises13.rename)(target, backup);
   }
   try {
-    await (0, import_promises12.cp)(source, target, {
+    await (0, import_promises13.cp)(source, target, {
       recursive: true,
       errorOnExist: true,
       force: false
     });
-    await (0, import_promises12.writeFile)(
+    await (0, import_promises13.writeFile)(
       import_node_path13.default.join(target, ".buildcade-install.json"),
       `${JSON.stringify({ schemaVersion: 1, release, source: "github:yatianxu/buildcade-skills" }, null, 2)}
 `,
       "utf8"
     );
   } catch (error) {
-    await (0, import_promises12.rm)(target, { recursive: true, force: true });
-    if (backup) await (0, import_promises12.rename)(backup, target);
+    await (0, import_promises13.rm)(target, { recursive: true, force: true });
+    if (backup) await (0, import_promises13.rename)(backup, target);
     throw error;
   }
   return { target, ...backup ? { backup } : {}, release };
@@ -7059,6 +8208,15 @@ function registerLogoutCommand(program3) {
     async (opts) => {
       try {
         const apiUrl = opts.all ? void 0 : resolveApiOrigin(opts.apiUrl);
+        if (apiUrl) {
+          const credentials = await loadCredentials(void 0, apiUrl);
+          if (credentials?.token) {
+            await apiRequest(apiUrl, API_AUTH_ROUTES.currentCliCredential, {
+              method: "DELETE",
+              token: credentials.token
+            });
+          }
+        }
         const removed = await removeCredentials(void 0, apiUrl);
         if (opts.json)
           printJson({
@@ -7088,7 +8246,7 @@ function registerLogoutCommand(program3) {
 }
 
 // src/commands/install.ts
-var import_node_child_process2 = require("node:child_process");
+var import_node_child_process3 = require("node:child_process");
 var import_node_path15 = __toESM(require("node:path"), 1);
 function installWithNpm(root, prefix) {
   const args = [
@@ -7104,7 +8262,7 @@ function installWithNpm(root, prefix) {
   const executable = npmCli ? process.execPath : "npm";
   const executableArguments = npmCli ? [npmCli, ...args] : args;
   return new Promise((resolve, reject) => {
-    const child = (0, import_node_child_process2.spawn)(executable, executableArguments, {
+    const child = (0, import_node_child_process3.spawn)(executable, executableArguments, {
       stdio: "ignore",
       windowsHide: true
     });

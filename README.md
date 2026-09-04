@@ -4,9 +4,9 @@ This repository distributes the public Buildcade Creator Skill as an immutable, 
 
 | Field | Value |
 | --- | --- |
-| Release | `v1.1.1` |
+| Release | `v1.1.2` |
 | Package | `skills/buildcade-creator/` |
-| Reviewed core commit | `5ceee2c8d83a5960a21d6443daf51aa971a71edb` |
+| Reviewed core commit | `9cac840b531096b447b39cf7337c4c31ffbcb00a` |
 | Game contract | Buildcade Game Spec v1 |
 | CLI | Included public Creator CLI, installed once through pinned `npx` |
 
@@ -15,7 +15,7 @@ This repository distributes the public Buildcade Creator Skill as an immutable, 
 Install the immutable release directly:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.1 skill install --agent codex
+npx --yes github:yatianxu/buildcade-skills#v1.1.2 skill install --agent codex
 ```
 
 Restart or reopen the agent task, then request:
@@ -29,7 +29,7 @@ $buildcade-creator validate this game and prepare a local preview
 Choose that agent's Skill directory explicitly:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.1 skill install --target <agent-skill-directory>
+npx --yes github:yatianxu/buildcade-skills#v1.1.2 skill install --target <agent-skill-directory>
 ```
 
 Convenience presets are available for `codex`, `claude`, `cursor` and `agents`. The explicit target remains the portable path for any directory-based agent.
@@ -39,7 +39,7 @@ Convenience presets are available for `codex`, `claude`, `cursor` and `agents`. 
 Install the same verified release once, then confirm the installed command:
 
 ```powershell
-npx --yes github:yatianxu/buildcade-skills#v1.1.1 install
+npx --yes github:yatianxu/buildcade-skills#v1.1.2 install
 buildcade --version
 ```
 
@@ -61,9 +61,11 @@ buildcade builds list
 buildcade logout
 ```
 
+Default `buildcade login` opens Buildcade's localized browser confirmation page and displays a short code. Sign in there with any available Product login method and explicitly approve the request. If the browser cannot open, use the URL and code printed to stderr. The CLI receives only its own one-hour access token and rotating refresh token; it never receives a Google/GitHub token or browser session. `login --email` and `login --github` remain explicit compatibility entries.
+
 Use `--json` for automation and `--locale en|zh-CN|zh-TW` for human output. Upload creates a Build and returns its Creator Center URL.
 
-Authenticated commands default to `https://api.tokenaimax.com`. Credentials are stored in separate profiles keyed by normalized API origin. Local developer authentication requires an explicit loopback origin: `login --dev --api-url http://localhost:<port>`.
+Authenticated commands default to `https://api.tokenaimax.com`. Credentials are stored in separate profiles keyed by normalized API origin; `logout` revokes the current server credential family and removes that local profile. Local developer authentication requires an explicit loopback origin: `login --dev --api-url http://localhost:<port>`.
 
 ## Business boundary
 
